@@ -8,11 +8,8 @@ class Player(models.Model):
     Modelo que representa a un jugador de ajedrez en el sistema.
     Almacena información personal, perfiles en plataformas y clasificaciones.
     """
-    
-    id = models.IntegerField(
-        primary_key=True,
-        verbose_name="ID del jugador"
-    )
+    class Meta:
+        unique_together = ('email', 'name')
     
     name = models.CharField(
         max_length=256,
@@ -91,8 +88,17 @@ class Player(models.Model):
     )
 
     def save(self, *args, **kwargs):
-        # Convert the name to uppercase before saving
-        self.name=self.name.upper()
+        # Verificar duplicados antes de guardar
+        if self.lichess_username:
+            try:
+                existing = Player.objects.get(lichess_username=self.lichess_username)
+                if existing.id != self.id:
+                    raise ValidationError("Lichess username ya existe.")
+            except Player.DoesNotExist:
+                pass
+        # Llamar a la API de Lichess si hay username
+        if self.lichess_username and not self.pk:  # Solo para nuevos registros
+            self.get_lichess_user_ratings()
         super().save(*args, **kwargs)
 
     def check_lichess_user_exists(self):

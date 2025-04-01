@@ -4,11 +4,6 @@ from chess_models.constants import TournamentSpeed, TournamentBoardType, Ranking
 
 class Tournament(models.Model):
     
-    id = models.IntegerField(
-        primary_key=True,
-        verbose_name="ID del torneo"
-    )
-    
     name = models.CharField(
         max_length=128,
         unique=True,
