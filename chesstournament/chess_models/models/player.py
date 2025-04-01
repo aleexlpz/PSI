@@ -88,46 +88,57 @@ class Player(models.Model):
     )
 
     def save(self, *args, **kwargs):
-        # Verificar duplicados antes de guardar
-        if self.lichess_username:
+        # Convertir el nombre a mayúsculas 
+        self.name = self.name.upper() if self.name else self.name
+
+        # Verificar duplicados antes de guardar 
+        if self.pk:  # Si el objeto ya existe: actualización
+            existing = Player.objects.filter(
+                models.Q(id=self.id) |  
+                models.Q(lichess_username=self.lichess_username) | 
+                models.Q(fide_id=self.fide_id) | 
+                models.Q(email=self.email, name=self.name) 
+            ).exclude(id=self.id).first()
+            if existing:
+                raise ValidationError("Ya existe un jugador con estos datos únicos.")
+
+        # Si hay lichess_username: obtener ratings
+        if self.lichess_username and (not self.pk or kwargs.get('force_lichess_update')):
             try:
-                existing = Player.objects.get(lichess_username=self.lichess_username)
-                if existing.id != self.id:
-                    raise ValidationError("Lichess username ya existe.")
-            except Player.DoesNotExist:
-                pass
-        # Llamar a la API de Lichess si hay username
-        if self.lichess_username and not self.pk:  # Solo para nuevos registros
-            self.get_lichess_user_ratings()
+                self.get_lichess_user_ratings()  # Actualiza ratings desde Lichess
+            except ValidationError as e:
+                if not self.pk:  
+                    raise
+                # Si es actualización, solo loguear el error 
+                import logging
+                logging.warning(f"No se pudieron actualizar ratings: {str(e)}")
+
+        # Llamar al save() original de Django
         super().save(*args, **kwargs)
 
     def check_lichess_user_exists(self):
-        """
-        Verifica si el usuario de Lichess existe.
-        Devuelve True si existe, False en caso contrario.
-        """
+        """Verifica si el usuario de Lichess existe. Devuelve True si existe, False en caso contrario."""
         try:
-            response = requests.get(f"https://lichess.org/api/user/{self.lichess_username}")
+            response = requests.get(
+                f"https://lichess.org/api/user/{self.lichess_username}",
+                timeout=5
+            )
             return response.status_code == 200
-        except requests.RequestException as e:
-            raise ValidationError(f"Error al verificar el usuario de Lichess: {e}")
-        return False
+        except requests.RequestException:
+            return False  # Si hay error de conexión, asumimos que no existe
 
     def get_lichess_user_ratings(self):
-        """
-        Obtiene las clasificaciones del jugador desde Lichess y las actualiza en el modelo.
-        """
         try:
-            response = requests.get(f"https://lichess.org/api/user/{self.lichess_username}")
-            if response.status_code == 200:
-                data = response.json()
-                self.lichess_rating_bullet = data.get("perfs", {}).get("bullet", {}).get("rating", 0)
-                self.lichess_rating_blitz = data.get("perfs", {}).get("blitz", {}).get("rating", 0)
-                self.lichess_rating_rapid = data.get("perfs", {}).get("rapid", {}).get("rating", 0)
-                self.lichess_rating_classical = data.get("perfs", {}).get("classical", {}).get("rating", 0)
-                self.save()
-            else:
-                raise ValidationError(f"Error al obtener las clasificaciones de Lichess: {response.status_code}")
+            response = requests.get(f"https://lichess.org/api/user/{self.lichess_username}", timeout=5)
+            response.raise_for_status()  # Lanza error si HTTP != 200
+            data = response.json()
+            
+            # Extraer ratings (con valores por defecto 0 si no existen)
+            self.lichess_rating_bullet = data.get('perfs', {}).get('bullet', {}).get('rating', 0)
+            self.lichess_rating_blitz = data.get('perfs', {}).get('blitz', {}).get('rating', 0)
+            self.lichess_rating_rapid = data.get('perfs', {}).get('rapid', {}).get('rating', 0)
+            self.lichess_rating_classical = data.get('perfs', {}).get('classical', {}).get('rating', 0)
+            
         except requests.RequestException as e:
-            raise ValidationError(f"Error al obtener las clasificaciones de Lichess: {e}")
-        return False
+            raise ValidationError(f"Error al obtener datos de Lichess: {str(e)}")
+        

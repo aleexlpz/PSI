@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.timezone import now
 from chess_models.constants import TournamentSpeed, TournamentBoardType, RankingSystem, TournamentType
+from django.contrib.auth.models import User 
 
 class Tournament(models.Model):
     
@@ -13,7 +14,7 @@ class Tournament(models.Model):
     )
     
     administrativeUser = models.ForeignKey(
-        'User',
+        User,
         on_delete=models.SET_NULL,
         null=True,
         verbose_name="Usuario administrador"
@@ -21,7 +22,7 @@ class Tournament(models.Model):
     
     players = models.ManyToManyField(
         'Player',
-        null=True,
+        through='tournamentPlayers',
         blank=True,
         verbose_name="Jugadores participantes"
     )
@@ -57,19 +58,19 @@ class Tournament(models.Model):
     tournament_type = models.CharField(
         max_length=2,
         verbose_name="Tipo de torneo",
-        choices=TournamentType.choices()
+        choices=TournamentType.choices
     )
     
     tournament_speed = models.CharField(
         max_length=2,
         verbose_name="Velocidad del torneo",
-        choices=TournamentSpeed.choices()
+        choices=TournamentSpeed.choices
     )
     
     board_type = models.CharField(
         max_length=3,
         verbose_name="Tipo de tablero",
-        choices= TournamentBoardType.choices()
+        choices= TournamentBoardType.choices
     )
     
     win_points = models.FloatField(
@@ -101,7 +102,6 @@ class Tournament(models.Model):
     rankingList = models.ManyToManyField(
         'RankingSystemClass',  
         blank=True,
-        null=True,
         verbose_name="Sistemas de clasificación asociados"
     )
     
@@ -116,22 +116,72 @@ class Tournament(models.Model):
         Returns:
             QuerySet: Lista de jugadores, ordenados o no según parámetro.
         """
-        tournament_players = self.players.through.objects.filter(tournament=self)
-        
         if not sorted:
-            players_ordered = tournament_players.order_by('id')
-            return [tp.player for tp in players_ordered]
+        # Orden por inscripción usando el modelo intermedio
+            through_relations = TournamentPlayers.objects.filter(
+                tournament=self
+            ).order_by('registration_order')
+            return [rel.player for rel in through_relations]
         else:
+            # Lógica existente de ordenamiento por ratings
             if (self.tournament_speed == TournamentSpeed.RAPID and 
                 self.board_type == TournamentBoardType.LICHESS):
                 return list(self.players.order_by('-lichess_rating_rapid'))
             elif (self.tournament_speed == TournamentSpeed.BLITZ and 
-                  self.board_type == TournamentBoardType.LICHESS):
+                self.board_type == TournamentBoardType.LICHESS):
                 return list(self.players.order_by('-lichess_rating_blitz'))
             elif (self.tournament_speed == TournamentSpeed.BULLET and 
-                  self.board_type == TournamentBoardType.LICHESS):
+                self.board_type == TournamentBoardType.LICHESS):
                 return list(self.players.order_by('-lichess_rating_bullet'))
             elif self.board_type == TournamentBoardType.OTB:
                 return list(self.players.order_by('-fide_rating'))
             else:
                 return list(self.players.order_by('name'))
+            
+    def add_player(self, player):
+        """
+        Agrega un jugador al torneo y asigna un orden de inscripción.
+        
+        Args:
+            player (Player): Instancia del jugador a agregar.
+            
+        Raises:
+            ValueError: Si el jugador ya está inscrito en el torneo.
+        """
+        last_order = TournamentPlayers.objects.filter(
+            tournament=self
+        ).aggregate(models.Max('registration_order'))['registration_order__max'] or 0
+        
+        TournamentPlayers.objects.create(
+            tournament=self,
+            player=player,
+            registration_order=last_order + 1
+        )
+        
+    def getPlayersCount(self):
+        """
+        Devuelve el número de jugadores inscritos en el torneo.
+        
+        Returns:
+            int: Número de jugadores inscritos.
+        """
+        return self.players.count()
+    
+
+class TournamentPlayers(models.Model):
+    tournament = models.ForeignKey('Tournament', on_delete=models.CASCADE)
+    player = models.ForeignKey('Player', on_delete=models.CASCADE)
+    registration_date = models.DateTimeField(auto_now_add=True)
+    registration_order = models.PositiveIntegerField()
+    
+    class Meta:
+        ordering = ['registration_order']
+        unique_together = ('tournament', 'player')
+        
+
+class RankingSystemClass(models.Model ) :
+    value = models.CharField(
+        max_length=2,
+        choices=RankingSystem.choices,
+        primary_key=True
+        )
