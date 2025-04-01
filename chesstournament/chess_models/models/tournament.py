@@ -22,9 +22,9 @@ class Tournament(models.Model):
     
     players = models.ManyToManyField(
         'Player',
-        through='tournamentPlayers',
-        blank=True,
-        verbose_name="Jugadores participantes"
+        through='TournamentPlayers',
+        through_fields=('tournament', 'player'),
+        related_name='tournaments'
     )
     
     referee = models.ForeignKey(
@@ -172,12 +172,12 @@ class Tournament(models.Model):
 class TournamentPlayers(models.Model):
     tournament = models.ForeignKey('Tournament', on_delete=models.CASCADE)
     player = models.ForeignKey('Player', on_delete=models.CASCADE)
+    registration_order = models.IntegerField(
+        null=True,  # Hacer el campo opcional
+        blank=True,
+        verbose_name="Orden de registro"
+    )
     registration_date = models.DateTimeField(auto_now_add=True)
-    registration_order = models.PositiveIntegerField()
-    
-    class Meta:
-        ordering = ['registration_order']
-        unique_together = ('tournament', 'player')
         
 
 class RankingSystemClass(models.Model ) :
