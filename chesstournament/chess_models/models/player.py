@@ -88,33 +88,75 @@ class Player(models.Model):
     )
 
     def save(self, *args, **kwargs):
-        # Convertir el nombre a mayúsculas 
-        self.name = self.name.upper() if self.name else self.name
+        # Verificar si ya existe un jugador con el mismo id, email-name pair o atributos únicos
+        if self.pk is None:  # Solo para nuevas instancias
+            existing_player = None
+            
+            # Buscar por lichess_username si está definido
+            if self.lichess_username:
+                existing_player = Player.objects.filter(
+                    lichess_username=self.lichess_username
+                ).first()
+            
+            # Si no encontrado por lichess_username, buscar por fide_id
+            if not existing_player and self.fide_id:
+                existing_player = Player.objects.filter(
+                    fide_id=self.fide_id
+                ).first()
+            
+            # Si no encontrado por los anteriores, buscar por email-name pair
+            if not existing_player and self.email and self.name:
+                existing_player = Player.objects.filter(
+                    email=self.email, 
+                    name=self.name
+                ).first()
+            
+            if existing_player:
+                # Copiar todos los campos excepto id y creation_date al jugador existente
+                for field in self._meta.fields:
+                    if field.name not in ['id', 'creation_date']:
+                        setattr(existing_player, field.name, getattr(self, field.name))
+                existing_player.save()
+                
+                # Actualizar la instancia actual (self) con los datos del existente
+                self.pk = existing_player.pk
+                for field in self._meta.fields:
+                    setattr(self, field.name, getattr(existing_player, field.name))
+                
+                return super().save(*args, **kwargs)
 
-        # Verificar duplicados antes de guardar 
-        if self.pk:  # Si el objeto ya existe: actualización
-            existing = Player.objects.filter(
-                models.Q(id=self.id) |  
-                models.Q(lichess_username=self.lichess_username) | 
-                models.Q(fide_id=self.fide_id) | 
-                models.Q(email=self.email, name=self.name) 
-            ).exclude(id=self.id).first()
-            if existing:
-                raise ValidationError("Ya existe un jugador con estos datos únicos.")
-
-        # Si hay lichess_username: obtener ratings
-        if self.lichess_username and (not self.pk or kwargs.get('force_lichess_update')):
+        # Si hay lichess_username, obtener los ratings de Lichess
+        if self.lichess_username:
             try:
-                self.get_lichess_user_ratings()  # Actualiza ratings desde Lichess
-            except ValidationError as e:
-                if not self.pk:  
-                    raise
-                # Si es actualización, solo loguear el error 
-                import logging
-                logging.warning(f"No se pudieron actualizar ratings: {str(e)}")
+                url = f"https://lichess.org/api/user/{self.lichess_username}"
+                response = requests.get(url)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    perfs = data.get('perfs', {})
+                    
+                    self.lichess_rating_bullet = perfs.get('bullet', {}).get('rating', 0)
+                    self.lichess_rating_blitz = perfs.get('blitz', {}).get('rating', 0)
+                    self.lichess_rating_rapid = perfs.get('rapid', {}).get('rating', 0)
+                    self.lichess_rating_classical = perfs.get('classical', {}).get('rating', 0)
+                else:
+                    # Si el usuario no existe en Lichess, limpiar los ratings
+                    self.lichess_rating_bullet = 0
+                    self.lichess_rating_blitz = 0
+                    self.lichess_rating_rapid = 0
+                    self.lichess_rating_classical = 0
+            except requests.RequestException:
+                # En caso de error de conexión, mantener los valores actuales
+                pass
 
-        # Llamar al save() original de Django
+        # Llamar al save original
         super().save(*args, **kwargs)
+
+    def __str__(self):
+        if self.lichess_username:
+            return self.lichess_username
+        # Guardamos el nombre original en otro campo o usamos una propiedad
+        return self.name
 
     def check_lichess_user_exists(self):
         """Verifica si el usuario de Lichess existe. Devuelve True si existe, False en caso contrario."""
@@ -130,17 +172,16 @@ class Player(models.Model):
     def get_lichess_user_ratings(self):
         try:
             response = requests.get(f"https://lichess.org/api/user/{self.lichess_username}", timeout=5)
-            response.raise_for_status()  # Lanza error si HTTP != 200
+            response.raise_for_status()  # Esto lanza HTTPError para códigos 4XX/5XX
             data = response.json()
             
-            # Extraer ratings (con valores por defecto 0 si no existen)
             self.lichess_rating_bullet = data.get('perfs', {}).get('bullet', {}).get('rating', 0)
             self.lichess_rating_blitz = data.get('perfs', {}).get('blitz', {}).get('rating', 0)
             self.lichess_rating_rapid = data.get('perfs', {}).get('rapid', {}).get('rating', 0)
             self.lichess_rating_classical = data.get('perfs', {}).get('classical', {}).get('rating', 0)
             
         except requests.RequestException as e:
-            raise ValidationError(f"Error al obtener datos de Lichess: {str(e)}")
+            raise LichessAPIError(f"Error al obtener datos de Lichess: {str(e)}")
         
 class LichessAPIError(Exception):
     """Excepción para errores de la API de Lichess"""
