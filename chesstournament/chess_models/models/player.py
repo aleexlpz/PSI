@@ -8,6 +8,7 @@ class Player(models.Model):
     Modelo que representa a un jugador de ajedrez en el sistema.
     Almacena información personal, perfiles en plataformas y clasificaciones.
     """
+    
     id = models.IntegerField(
         primary_key=True,
         verbose_name="ID del jugador"
@@ -88,3 +89,39 @@ class Player(models.Model):
         auto_now=True,
         verbose_name="Fecha de actualización"
     )
+
+    def save(self, *args, **kwargs):
+        # Convert the name to uppercase before saving
+        self.name=self.name.upper()
+        super().save(*args, **kwargs)
+
+    def check_lichess_user_exists(self):
+        """
+        Verifica si el usuario de Lichess existe.
+        Devuelve True si existe, False en caso contrario.
+        """
+        try:
+            response = requests.get(f"https://lichess.org/api/user/{self.lichess_username}")
+            return response.status_code == 200
+        except requests.RequestException as e:
+            raise ValidationError(f"Error al verificar el usuario de Lichess: {e}")
+        return False
+
+    def get_lichess_user_ratings(self):
+        """
+        Obtiene las clasificaciones del jugador desde Lichess y las actualiza en el modelo.
+        """
+        try:
+            response = requests.get(f"https://lichess.org/api/user/{self.lichess_username}")
+            if response.status_code == 200:
+                data = response.json()
+                self.lichess_rating_bullet = data.get("perfs", {}).get("bullet", {}).get("rating", 0)
+                self.lichess_rating_blitz = data.get("perfs", {}).get("blitz", {}).get("rating", 0)
+                self.lichess_rating_rapid = data.get("perfs", {}).get("rapid", {}).get("rating", 0)
+                self.lichess_rating_classical = data.get("perfs", {}).get("classical", {}).get("rating", 0)
+                self.save()
+            else:
+                raise ValidationError(f"Error al obtener las clasificaciones de Lichess: {response.status_code}")
+        except requests.RequestException as e:
+            raise ValidationError(f"Error al obtener las clasificaciones de Lichess: {e}")
+        return False

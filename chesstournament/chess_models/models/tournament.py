@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.timezone import now
+from chess_models.constants import TournamentSpeed, TournamentBoardType, RankingSystem, TournamentType
 
 class Tournament(models.Model):
     
@@ -60,20 +61,20 @@ class Tournament(models.Model):
     
     tournament_type = models.CharField(
         max_length=2,
-        verbose_name="Tipo de torneo"
-        # choices=TOURNAMENT_TYPE_CHOICES
+        verbose_name="Tipo de torneo",
+        choices=TournamentType.choices()
     )
     
     tournament_speed = models.CharField(
         max_length=2,
-        verbose_name="Velocidad del torneo"
-        # choices=TOURNAMENT_SPEED_CHOICES
+        verbose_name="Velocidad del torneo",
+        choices=TournamentSpeed.choices()
     )
     
     board_type = models.CharField(
         max_length=3,
-        verbose_name="Tipo de tablero"
-        # choices=TOURNAMENT_BOARD_TYPE_CHOICES
+        verbose_name="Tipo de tablero",
+        choices= TournamentBoardType.choices()
     )
     
     win_points = models.FloatField(
@@ -101,3 +102,41 @@ class Tournament(models.Model):
         default=0,
         verbose_name="Número de rondas para torneos suizos"
     )
+    
+    rankingList = models.ManyToManyField(
+        'RankingSystemClass',  
+        blank=True,
+        null=True,
+        verbose_name="Sistemas de clasificación asociados"
+    )
+    
+    def getPlayers(self, sorted=False):
+        """
+        Devuelve los jugadores del torneo, opcionalmente ordenados según criterios.
+        
+        Args:
+            sorted (bool): Si True, ordena según el tipo de torneo. Si False, 
+                          devuelve en orden de inserción.
+        
+        Returns:
+            QuerySet: Lista de jugadores, ordenados o no según parámetro.
+        """
+        tournament_players = self.players.through.objects.filter(tournament=self)
+        
+        if not sorted:
+            players_ordered = tournament_players.order_by('id')
+            return [tp.player for tp in players_ordered]
+        else:
+            if (self.tournament_speed == TournamentSpeed.RAPID and 
+                self.board_type == TournamentBoardType.LICHESS):
+                return list(self.players.order_by('-lichess_rating_rapid'))
+            elif (self.tournament_speed == TournamentSpeed.BLITZ and 
+                  self.board_type == TournamentBoardType.LICHESS):
+                return list(self.players.order_by('-lichess_rating_blitz'))
+            elif (self.tournament_speed == TournamentSpeed.BULLET and 
+                  self.board_type == TournamentBoardType.LICHESS):
+                return list(self.players.order_by('-lichess_rating_bullet'))
+            elif self.board_type == TournamentBoardType.OTB:
+                return list(self.players.order_by('-fide_rating'))
+            else:
+                return list(self.players.order_by('name'))
