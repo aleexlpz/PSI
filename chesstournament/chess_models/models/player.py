@@ -142,3 +142,6 @@ class Player(models.Model):
         except requests.RequestException as e:
             raise ValidationError(f"Error al obtener datos de Lichess: {str(e)}")
         
+class LichessAPIError(Exception):
+    """Excepción para errores de la API de Lichess"""
+    pass

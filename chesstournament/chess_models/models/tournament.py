@@ -101,6 +101,7 @@ class Tournament(models.Model):
     
     rankingList = models.ManyToManyField(
         'RankingSystemClass',  
+        #through='RankingSystemClass',
         blank=True,
         verbose_name="Sistemas de clasificación asociados"
     )

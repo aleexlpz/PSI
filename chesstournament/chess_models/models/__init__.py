@@ -1,4 +1,4 @@
-from .player import Player
+from .player import Player, LichessAPIError
 from .referee import Referee
 #from .game import Game
 #from .round import Round
