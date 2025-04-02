@@ -88,68 +88,43 @@ class Player(models.Model):
     )
 
     def save(self, *args, **kwargs):
-        # Verificar si ya existe un jugador con el mismo id, email-name pair o atributos únicos
-        if self.pk is None:  # Solo para nuevas instancias
+        # Si ambos campos están vacíos, generar valores temporales únicos
+        if not self.email and not self.name:
+            self.email = f"temp_{self.lichess_username or id(self)}@example.com"
+            self.name = f"Jugador temporal {self.lichess_username or id(self)}"
+        
+        # Lógica existente para evitar duplicados
+        if self.pk is None:
             existing_player = None
-            
-            # Buscar por lichess_username si está definido
             if self.lichess_username:
-                existing_player = Player.objects.filter(
-                    lichess_username=self.lichess_username
-                ).first()
-            
-            # Si no encontrado por lichess_username, buscar por fide_id
+                existing_player = Player.objects.filter(lichess_username=self.lichess_username).first()
             if not existing_player and self.fide_id:
-                existing_player = Player.objects.filter(
-                    fide_id=self.fide_id
-                ).first()
-            
-            # Si no encontrado por los anteriores, buscar por email-name pair
-            if not existing_player and self.email and self.name:
-                existing_player = Player.objects.filter(
-                    email=self.email, 
-                    name=self.name
-                ).first()
+                existing_player = Player.objects.filter(fide_id=self.fide_id).first()
+            if not existing_player:
+                existing_player = Player.objects.filter(email=self.email, name=self.name).first()
             
             if existing_player:
-                # Copiar todos los campos excepto id y creation_date al jugador existente
+                # Actualizar el jugador existente y evitar duplicados
                 for field in self._meta.fields:
                     if field.name not in ['id', 'creation_date']:
                         setattr(existing_player, field.name, getattr(self, field.name))
                 existing_player.save()
-                
-                # Actualizar la instancia actual (self) con los datos del existente
                 self.pk = existing_player.pk
-                for field in self._meta.fields:
-                    setattr(self, field.name, getattr(existing_player, field.name))
-                
-                return super().save(*args, **kwargs)
+                return  # Evita guardar el nuevo jugador
 
-        # Si hay lichess_username, obtener los ratings de Lichess
+        # Lógica para actualizar ratings de Lichess (opcional)
         if self.lichess_username:
             try:
-                url = f"https://lichess.org/api/user/{self.lichess_username}"
-                response = requests.get(url)
-                
+                response = requests.get(f"https://lichess.org/api/user/{self.lichess_username}")
                 if response.status_code == 200:
                     data = response.json()
                     perfs = data.get('perfs', {})
-                    
                     self.lichess_rating_bullet = perfs.get('bullet', {}).get('rating', 0)
                     self.lichess_rating_blitz = perfs.get('blitz', {}).get('rating', 0)
                     self.lichess_rating_rapid = perfs.get('rapid', {}).get('rating', 0)
-                    self.lichess_rating_classical = perfs.get('classical', {}).get('rating', 0)
-                else:
-                    # Si el usuario no existe en Lichess, limpiar los ratings
-                    self.lichess_rating_bullet = 0
-                    self.lichess_rating_blitz = 0
-                    self.lichess_rating_rapid = 0
-                    self.lichess_rating_classical = 0
             except requests.RequestException:
-                # En caso de error de conexión, mantener los valores actuales
-                pass
+                pass  # Mantener los valores actuales si hay error
 
-        # Llamar al save original
         super().save(*args, **kwargs)
 
     def __str__(self):
