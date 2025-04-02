@@ -1,5 +1,5 @@
 # chess_models/models/__init__.py
-from chess_models.constants import TournamentType, TournamentSpeed, Scores
+from chess_models.constants import TournamentType, TournamentSpeed, TournamentBoardType, RankingSystem, Scores
 from chess_models.models.player import Player, LichessAPIError
 from chess_models.models.tournament import Tournament
 from chess_models.models.round import Round
@@ -14,6 +14,8 @@ __all__ = [
     'Referee',
     'TournamentType',
     'TournamentSpeed',
+    'TournamentBoardType',
+    'RankingSystem',
     'Scores'
     'LichessAPIError'
 ]
