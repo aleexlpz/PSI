@@ -168,6 +168,33 @@ class Tournament(models.Model):
         """
         return self.players.count()
     
+    def cleanRankingList(self):
+        """Limpia el campo rankingList del torneo"""
+        self.rankingList.clear()
+        
+    def addToRankingList(self, ranking_value):
+        """
+        Añade un objeto RankingSystem al rankingList del torneo.
+        Si no existe, lo crea primero.
+        """
+        ranking_obj, created = RankingSystemClass.objects.get_or_create(
+            value=ranking_value
+        )
+        self.rankingList.add(ranking_obj)
+    
+    def getRoundCount(self):
+        """Devuelve el número de rondas que tiene el torneo"""
+        return self.round_set.count()
+    
+    def get_number_of_rounds_with_games(self):
+        """Devuelve el número de rondas con al menos una partida jugada"""
+        return self.round_set.filter(game__finished=True).distinct().count()
+    
+    def get_latest_round_with_games(self):
+        """Devuelve la última ronda con partidas jugadas"""
+        return self.round_set.filter(game__finished=True).order_by('-start_date').first()
+    
+    
 
 class TournamentPlayers(models.Model):
     tournament = models.ForeignKey('Tournament', on_delete=models.CASCADE)
