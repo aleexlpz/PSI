@@ -172,6 +172,10 @@ class Tournament(models.Model):
         """Limpia el campo rankingList del torneo"""
         self.rankingList.clear()
         
+    def getRankingList(self):
+        """Devuelve la lista de sistemas de clasificación asociados al torneo"""
+        return self.rankingList.all()
+    
     def addToRankingList(self, ranking_value):
         """
         Añade un objeto RankingSystem al rankingList del torneo.
@@ -193,6 +197,11 @@ class Tournament(models.Model):
     def get_latest_round_with_games(self):
         """Devuelve la última ronda con partidas jugadas"""
         return self.round_set.filter(game__finished=True).order_by('-start_date').first()
+    
+    def __str__(self):
+        """Devuelve el nombre del torneo"""
+        return self.name        
+
     
     
 

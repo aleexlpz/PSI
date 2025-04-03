@@ -101,19 +101,19 @@ class Game(models.Model):
                 
         except requests.RequestException as e:
             raise LichessAPIError(f"Error de conexión con Lichess: {str(e)}")
-
-def __str__(self):
-    # Verificar si los jugadores están asignados
-    white_info = f"{self.white.lichess_username}({self.white.id})" if self.white else "None"
-    black_info = f"{self.black.lichess_username}({self.black.id})" if self.black else "None"
-    
-    # Mapear el resultado a texto
-    result_mapping = {
-        Scores.WHITE: "White",
-        Scores.BLACK: "Black", 
-        Scores.DRAW: "Draw",
-        Scores.NOAVAILABLE: "No result"
-    }
-    result_str = result_mapping.get(self.result, "white")
-    
-    return f"{white_info} vs {black_info} = {result_str}"
+        
+    def __str__(self):
+        # Verificar si los jugadores están asignados
+        white_info = f"{self.white.lichess_username}({self.white.id})" if self.white else "None"
+        black_info = f"{self.black.lichess_username}({self.black.id})" if self.black else "None"
+        
+        # Mapear el resultado a texto
+        result_mapping = {
+            Scores.WHITE: "White",
+            Scores.BLACK: "Black", 
+            Scores.DRAW: "Draw",
+            Scores.NOAVAILABLE: "No result"
+        }
+        result_str = result_mapping.get(self.result, "white")
+        
+        return f"{white_info} vs {black_info} = {result_str}"
