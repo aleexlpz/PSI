@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=128, verbose_name='Nombre de la ronda')),
                 ('start_date', models.DateTimeField(auto_now_add=True, null=True, verbose_name='Fecha de inicio')),
                 ('end_date', models.DateTimeField(blank=True, null=True, verbose_name='Fecha de finalización')),
-                ('fnish', models.BooleanField(default=False, verbose_name='¿Ronda finalizada?')),
+                ('finish', models.BooleanField(default=False, verbose_name='¿Ronda finalizada?')),
                 ('tournament', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='rounds', to='chess_models.tournament', verbose_name='Torneo')),
             ],
         ),

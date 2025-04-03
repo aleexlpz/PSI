@@ -103,9 +103,18 @@ class Tournament(models.Model):
         'RankingSystemClass',  
         #through='RankingSystemClass',
         blank=True,
+        related_name="rounds",
         verbose_name="Sistemas de clasificación asociados"
     )
     
+    rounds = models.ManyToManyField(
+        'Round',
+        through='TournamentRound',
+        blank=True,
+        verbose_name="Rondas programadas",
+        related_name='tournament_schedules'  # Nombre único
+    )
+
     def getPlayers(self, sorted=False):
         """
         Devuelve los jugadores del torneo, opcionalmente ordenados según criterios.
@@ -189,15 +198,14 @@ class Tournament(models.Model):
     def getRoundCount(self):
         """Devuelve el número de rondas que tiene el torneo"""
         return self.round_set.count()
-    
+
     def get_number_of_rounds_with_games(self):
         """Devuelve el número de rondas con al menos una partida jugada"""
-        return self.round_set.filter(game__finished=True).distinct().count()
-    
+        return self.round_set.filter(games__finished=True).distinct().count()
+
     def get_latest_round_with_games(self):
         """Devuelve la última ronda con partidas jugadas"""
-        return self.round_set.filter(game__finished=True).order_by('-start_date').first()
-    
+        return self.round_set.filter(games__finished=True).order_by('-start_date').first()
     def __str__(self):
         """Devuelve el nombre del torneo"""
         return self.name        
@@ -222,3 +230,6 @@ class RankingSystemClass(models.Model ) :
         choices=RankingSystem.choices,
         primary_key=True
         )
+class TournamentRound(models.Model):
+    tournament = models.ForeignKey('Tournament', on_delete=models.CASCADE)
+    round = models.ForeignKey('Round', on_delete=models.CASCADE)

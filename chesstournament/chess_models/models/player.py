@@ -17,21 +17,22 @@ class Player(models.Model):
         blank=True,
         verbose_name="Nombre del jugador"
     )
-
+    
     email = models.EmailField(
         blank=True,
         verbose_name="Correo electrónico"
     )
-
+    
     country = models.CharField(
         max_length=2,
         blank=True,
         verbose_name="País"
     )
-
+    
     lichess_username = models.CharField(
         max_length=150,
         unique=True,
+        #null  =  True,
         blank=True,
         verbose_name="Nombre de usuario en Lichess"
     )
@@ -88,71 +89,61 @@ class Player(models.Model):
         verbose_name="Fecha de actualización"
     )
 
-    def save(self, *args, **kwargs):
-        # Si lichess_username está vacío, asignar un valor temporal único
-        if not self.lichess_username:
-            self.lichess_username = f"temp_{uuid.uuid4().hex[:8]}"
-        
-        # Verificar si ya existe un jugador con el mismo lichess_username
-        if self.pk is None:  # Solo para nuevas instancias
-            existing_player = None
-            
-            # Buscar por lichess_username primero
-            if self.lichess_username:
-                existing_player = Player.objects.filter(
-                    lichess_username=self.lichess_username
-                ).first()
-            
-            # Si no encontrado, buscar por fide_id
-            if not existing_player and self.fide_id:
-                existing_player = Player.objects.filter(
-                    fide_id=self.fide_id
-                ).first()
-            
-            # Si no encontrado, buscar por email-name pair
-            if not existing_player and (self.email or self.name):
-                existing_player = Player.objects.filter(
-                    email=self.email, 
-                    name=self.name
-                ).first()
-            
-            if existing_player:
-                # Actualizar el jugador existente
-                for field in self._meta.fields:
-                    if field.name not in ['id', 'creation_date']:
-                        setattr(existing_player, field.name, getattr(self, field.name))
-                existing_player.save()
-                
-                # Actualizar la instancia actual
-                self.pk = existing_player.pk
-                for field in self._meta.fields:
-                    setattr(self, field.name, getattr(existing_player, field.name))
-                return
-
-        # Actualizar ratings de Lichess si hay username
-        if self.lichess_username and not self.lichess_username.startswith('temp_'):
-            try:
-                url = f"https://lichess.org/api/user/{self.lichess_username}"
-                response = requests.get(url)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    perfs = data.get('perfs', {})
-                    
-                    self.lichess_rating_bullet = perfs.get('bullet', {}).get('rating', 0)
-                    self.lichess_rating_blitz = perfs.get('blitz', {}).get('rating', 0)
-                    self.lichess_rating_rapid = perfs.get('rapid', {}).get('rating', 0)
-                    self.lichess_rating_classical = perfs.get('classical', {}).get('rating', 0)
-            except requests.RequestException:
-                pass  # Mantener valores actuales si hay error
-
-        super().save(*args, **kwargs)
-
     def __str__(self):
-        if self.lichess_username:
-            return self.lichess_username
-        # Guardamos el nombre original en otro campo o usamos una propiedad
-        return self.name
+        return self.lichess_username if self.lichess_username else self.name
+
+    def save(self, *args, **kwargs):
+        if getattr(self, '_saving', False):
+            return super().save(*args, **kwargs)
+        
+        self._saving = True
+        
+        try:
+            # Buscar jugador existente por lichess_username (si existe)
+            if self.lichess_username and self.lichess_username != '':
+                existing = Player.objects.filter(
+                    lichess_username=self.lichess_username
+                ).exclude(pk=self.pk).first()
+                
+                if existing:
+                    # Actualizar campos del jugador existente
+                    for field in self._meta.fields:
+                        if field.name not in ['id', 'creation_date']:
+                            setattr(existing, field.name, getattr(self, field.name))
+                    existing.save()
+                    self.pk = existing.pk
+                    return
+
+            # Buscar por email y name (si ambos existen)
+            if self.email and self.name:
+                existing = Player.objects.filter(
+                    email=self.email,
+                    name=self.name
+                ).exclude(pk=self.pk).first()
+                
+                if existing:
+                    # Actualizar campos del jugador existente
+                    for field in self._meta.fields:
+                        if field.name not in ['id', 'creation_date']:
+                            setattr(existing, field.name, getattr(self, field.name))
+                    existing.save()
+                    self.pk = existing.pk
+                    return
+
+            # Manejo de campos vacíos
+            if self.lichess_username == '':
+                if Player.objects.filter(lichess_username='').exclude(pk=self.pk).exists():
+                    self.lichess_username = f"temp-{uuid.uuid4().hex[:8]}"
+
+            if not self.email and not self.name:
+                self.email = f"temp-email-{uuid.uuid4().hex[:8]}@example.com"
+                self.name = f"temp-name-{uuid.uuid4().hex[:8]}"
+
+            return super().save(*args, **kwargs)
+        
+        finally:
+            self._saving = False
+
 
     def check_lichess_user_exists(self):
         """Verifica si el usuario de Lichess existe. Devuelve True si existe, False en caso contrario."""

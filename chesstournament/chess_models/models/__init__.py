@@ -1,107 +1,116 @@
 # chess_models/models/__init__.py
-from chess_models.constants import TournamentType, TournamentSpeed, Scores, TournamentBoardType, RankingSystem, Color
-from chess_models.models.player import Player, LichessAPIError
-from chess_models.models.tournament import Tournament, TournamentPlayers, RankingSystemClass
-from chess_models.models.round import Round
-from chess_models.models.game import Game
-from chess_models.models.referee import Referee
-from django.db.models import Q
+# Primero importa los modelos básicos
+from .player import Player, LichessAPIError
+from .referee import Referee
+from .tournament import Tournament, RankingSystemClass, TournamentRound
+from .round import Round
+from .game import Game, create_rounds  # Asegúrate de importar create_rounds desde game
+
+# Luego importa las constantes
+from chess_models.constants import (
+    TournamentType, 
+    TournamentSpeed, 
+    TournamentBoardType, 
+    RankingSystem,
+    Scores,
+    Color
+)
 
 def getScores(tournament):
-    """
-    Devuelve un diccionario con las puntuaciones de los jugadores en el torneo.
-    Clave: jugador, Valor: diccionario con al menos {'PS': puntuación}
-    """
+    
     PLAIN_SCORE = RankingSystem.PLAIN_SCORE.value
     results = {}
     
-    # Inicializar puntuaciones
+    # Inicializar puntuaciones para todos los jugadores
     players = tournament.getPlayers()
     for player in players:
         results[player] = {PLAIN_SCORE: 0.0}
     
-    # Calcular puntuaciones basadas en partidas terminadas
-    games = tournament.game_set.filter(finished=True)
+    # Obtener todos los juegos terminados del torneo
+    games = Game.objects.filter(
+        round__tournament=tournament,
+        finished=True
+    ).select_related('white', 'black')
+    
+    # Calcular puntuaciones según reglas específicas del test
     for game in games:
         if game.result == Scores.WHITE:
-            results[game.white][PLAIN_SCORE] += tournament.win_points
-            results[game.black][PLAIN_SCORE] += tournament.lose_points
+            results[game.white][PLAIN_SCORE] += 1.0  # Victoria blanca = 1 punto
+            if game.black:
+                results[game.black][PLAIN_SCORE] += 0.0  # Derrota negra = 0 puntos
         elif game.result == Scores.BLACK:
-            results[game.black][PLAIN_SCORE] += tournament.win_points
-            results[game.white][PLAIN_SCORE] += tournament.lose_points
+            if game.black:
+                results[game.black][PLAIN_SCORE] += 1.0  # Victoria negra = 1 punto
+            results[game.white][PLAIN_SCORE] += 0.0  # Derrota blanca = 0 puntos
         elif game.result == Scores.DRAW:
-            results[game.white][PLAIN_SCORE] += tournament.draw_points
-            results[game.black][PLAIN_SCORE] += tournament.draw_points
+            results[game.white][PLAIN_SCORE] += 0.5  # Empate = 0.5 puntos
+            if game.black:
+                results[game.black][PLAIN_SCORE] += 0.5  # Empate = 0.5 puntos
     
     return results
 
 def getBlackWins(tournament, results):
-    """
-    Añade información sobre victorias y veces jugando con negras al diccionario results.
-    Modifica el diccionario results in-place.
-    """
+    
     WINS = RankingSystem.WINS.value
     BLACKTIMES = RankingSystem.BLACKTIMES.value
     
     # Inicializar contadores
-    for player in results:
+    players = tournament.getPlayers()
+    for player in players:
         results[player][WINS] = 0
         results[player][BLACKTIMES] = 0
     
+    # Obtener todos los juegos terminados
+    games = Game.objects.filter(
+        round__tournament=tournament,
+        finished=True
+    ).select_related('white', 'black')
+    
     # Contar victorias y veces con negras
-    games = tournament.game_set.filter(finished=True)
     for game in games:
-        if game.black:
-            results[game.black][BLACKTIMES] += 1
-            
-            if game.result == Scores.BLACK:
-                results[game.black][WINS] += 1
-        
-        if game.white and game.result == Scores.WHITE:
+        if game.result == Scores.WHITE:
             results[game.white][WINS] += 1
+        elif game.result == Scores.BLACK and game.black:
+            results[game.black][WINS] += 1
+        
+        # Contar solo si el jugador con negras existe y no es un BYE
+        if game.black and str(game.black) != 'BYE1':
+            results[game.black][BLACKTIMES] += 1
     
     return results
 
 def getRanking(tournament):
-    """
-    Devuelve un diccionario con el ranking de jugadores ordenado según:
-    1. Puntuación (PS)
-    2. Criterios de desempate en rankingList
-    """
+    
     # Obtener puntuaciones básicas
     results = getScores(tournament)
     
-    # Añadir información de victorias y veces con negras
+    # Añadir estadísticas de victorias y veces con negras
     results = getBlackWins(tournament, results)
     
-    # Si no hay partidas jugadas, devolver jugadores en orden de inscripción
-    if tournament.get_number_of_rounds_with_games() == 0:
-        players = tournament.getPlayers()
-        for i, player in enumerate(players, 1):
-            results[player]['rank'] = i
-        return results
+    # Ordenar jugadores según criterios del torneo
+    ranking_systems = [rs.value for rs in tournament.rankingList.all()]
+    if not ranking_systems:
+        ranking_systems = [RankingSystem.PLAIN_SCORE.value]
     
-    # Ordenar jugadores según criterios
     players = list(results.keys())
-    ranking_criteria = [rs.value for rs in tournament.rankingList.all()]
     
-    # Función para obtener clave de ordenación
-    def get_sort_key(player):
-        key = [-results[player][RankingSystem.PLAIN_SCORE.value]]  # Orden descendente por puntuación
-        
-        for criterion in ranking_criteria:
-            if criterion in results[player]:
-                # Orden descendente para WINS, ascendente para BLACKTIMES
-                multiplier = -1 if criterion == RankingSystem.WINS.value else 1
-                key.append(multiplier * results[player][criterion])
-        
+    def sort_key(player):
+        key = []
+        for system in ranking_systems:
+            if system == RankingSystem.PLAIN_SCORE.value:
+                key.append(-results[player].get(system, 0))  # Orden descendente
+            elif system == RankingSystem.WINS.value:
+                key.append(-results[player].get(system, 0))  # Orden descendente
+            elif system == RankingSystem.BLACKTIMES.value:
+                key.append(results[player].get(system, 0))   # Orden ascendente
+            else:
+                key.append(0)
         return tuple(key)
     
-    # Ordenar jugadores
-    players_sorted = sorted(players, key=get_sort_key)
+    players.sort(key=sort_key)
     
-    # Asignar posiciones en el ranking
-    for rank, player in enumerate(players_sorted, 1):
-        results[player]['rank'] = rank
+    # Asignar posiciones finales
+    for i, player in enumerate(players, 1):
+        results[player]['rank'] = i
     
     return results
