@@ -24,7 +24,7 @@ from .serializers import TournamentSerializer
 from django.shortcuts import get_object_or_404
 import csv
 from io import StringIO
-from chess_models.models.game import create_rounds, get_lichess_game_result
+from chess_models.models.game import create_rounds
 from chess_models.models import getRanking
 
 
@@ -315,7 +315,7 @@ class UpdateLichessGameAPIView(APIView):
         
         try:
             # Implementar lógica para obtener resultado de Lichess
-            winner = get_lichess_game_result(lichess_game_id)
+            winner = game.get_lichess_game_result(lichess_game_id)
             game.result = winner
             game.finished = True
             game.save()

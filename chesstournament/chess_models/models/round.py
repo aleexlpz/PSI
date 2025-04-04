@@ -5,11 +5,9 @@ from .tournament import Tournament
 class Round(models.Model):
     name = models.CharField(max_length=128, verbose_name="Nombre de la ronda")
     
-    # Cambia related_name a 'round_set' para coincidir con los tests
     tournament = models.ForeignKey(
         Tournament,
         on_delete=models.CASCADE,
-        related_name='game_set',
         verbose_name="Torneo asociado"
     )
     

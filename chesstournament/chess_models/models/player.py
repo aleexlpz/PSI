@@ -32,7 +32,6 @@ class Player(models.Model):
     lichess_username = models.CharField(
         max_length=150,
         unique=True,
-        #null  =  True,
         blank=True,
         verbose_name="Nombre de usuario en Lichess"
     )

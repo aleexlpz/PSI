@@ -106,32 +106,32 @@ class Tournament(models.Model):
         related_name="rounds",
         verbose_name="Sistemas de clasificación asociados"
     )
-    
-    round_set = models.ManyToManyField(
-        'Round',
-        through='TournamentRound',
-        blank=True,
-        verbose_name="Rondas programadas",
-        related_name='round_set'  
-    )
 
-    def getPlayers(self, sorted=False):
+    def getPlayers(self, sorted=False, lichess_usernames=None):
         """
         Devuelve los jugadores del torneo, opcionalmente ordenados según criterios.
         
         Args:
             sorted (bool): Si True, ordena según el tipo de torneo. Si False, 
-                          devuelve en orden de inserción.
+                        devuelve en orden de inserción.
+            lichess_usernames (list): Lista de nombres de usuario de los jugadores,
+                                    en caso de que necesites forzar un orden específico.
         
         Returns:
             QuerySet: Lista de jugadores, ordenados o no según parámetro.
         """
         if not sorted:
-        # Orden por inscripción usando el modelo intermedio
+            # Orden por inscripción usando el modelo intermedio
             through_relations = TournamentPlayers.objects.filter(
                 tournament=self
             ).order_by('registration_order')
-            return [rel.player for rel in through_relations]
+            players = [rel.player for rel in through_relations]
+            
+            # Si tienes lichess_usernames, ordena a los jugadores según esa lista
+            if lichess_usernames:
+                players = sorted(players, key=lambda p: lichess_usernames.index(p.lichess_username))
+            
+            return players
         else:
             # Lógica existente de ordenamiento por ratings
             if (self.tournament_speed == TournamentSpeed.RAPID and 
@@ -201,11 +201,11 @@ class Tournament(models.Model):
 
     def get_number_of_rounds_with_games(self):
         """Devuelve el número de rondas con al menos una partida jugada"""
-        return self.round_set.filter(games__finished=True).distinct().count()
+        return self.round_set.filter(game__finished=True).distinct().count()
 
     def get_latest_round_with_games(self):
         """Devuelve la última ronda con partidas jugadas"""
-        return self.round_set.filter(games__finished=True).order_by('-start_date').first()
+        return self.round_set.filter(game__finished=True).order_by('-start_date').first()
     
     def removeFromRankingList(self, ranking_value):
         """
@@ -235,11 +235,12 @@ class TournamentPlayers(models.Model):
     tournament = models.ForeignKey('Tournament', on_delete=models.CASCADE)
     player = models.ForeignKey('Player', on_delete=models.CASCADE)
     registration_order = models.IntegerField(
-        null=True,  # Hacer el campo opcional
-        blank=True,
-        verbose_name="Orden de registro"
+        verbose_name="Orden de registro"  
     )
     registration_date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['registration_order']  
         
 
 class RankingSystemClass(models.Model ) :

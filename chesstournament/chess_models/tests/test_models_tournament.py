@@ -156,13 +156,14 @@ class TournamentModelTest(TransactionTestCase):
             tournament.players.add(player)
             players.append(player)
         # list of participants
+        
         participants = tournament.getPlayers(sorted=False)
         create_rounds(tournament)
         rounds = tournament.round_set.all()
         for i, round in enumerate(rounds):
             # print(round)
             for j, game in enumerate(round.game_set.all()):
-                # print("    ", game)
+                
                 self.assertEqual(game.white, participants[solution[i][j][0]-1])
                 self.assertEqual(game.black, participants[solution[i][j][1]-1])
 
@@ -262,6 +263,7 @@ class TournamentModelTest(TransactionTestCase):
             players.append(player)
         # list of participants
         participants = tournament.getPlayers(sorted=True)
+        
         create_rounds(tournament)
         rounds = tournament.round_set.all()
         for i, round in enumerate(rounds):
