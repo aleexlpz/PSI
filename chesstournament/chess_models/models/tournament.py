@@ -235,6 +235,8 @@ class TournamentPlayers(models.Model):
     tournament = models.ForeignKey('Tournament', on_delete=models.CASCADE)
     player = models.ForeignKey('Player', on_delete=models.CASCADE)
     registration_order = models.IntegerField(
+        null=True,
+        blank=True,
         verbose_name="Orden de registro"  
     )
     registration_date = models.DateTimeField(auto_now_add=True)
