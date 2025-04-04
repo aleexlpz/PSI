@@ -21,5 +21,15 @@ from django.urls import re_path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    re_path(r'auth/', include('djoser.urls')),
     re_path(r'^auth/', include('djoser.urls')),
+    re_path(r'^auth/', include('djoser.urls.authtoken')),
+    path('', include('api.urls')),
 ]
+
+""" urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('api/v1/', include('api.urls')),  # Incluye las URLs de tu API
+    path('api/v1/auth/', include('djoser.urls')),  # URLs de autenticación
+    path('api/v1/auth/', include('djoser.urls.authtoken')),  # URLs de tokens
+] """

@@ -17,35 +17,62 @@ from chess_models.constants import (
 )
 
 def getScores(tournament):
-    
     PLAIN_SCORE = RankingSystem.PLAIN_SCORE.value
     results = {}
     
-    # Inicializar puntuaciones para todos los jugadores
     players = tournament.getPlayers()
     for player in players:
         results[player] = {PLAIN_SCORE: 0.0}
     
-    # Obtener todos los juegos terminados del torneo
+    
     games = Game.objects.filter(
         round__tournament=tournament,
         finished=True
     ).select_related('white', 'black')
     
-    # Calcular puntuaciones según reglas específicas del test
     for game in games:
         if game.result == Scores.WHITE:
-            results[game.white][PLAIN_SCORE] += 1.0  # Victoria blanca = 1 punto
+            results[game.white][PLAIN_SCORE] += tournament.win_points
             if game.black:
-                results[game.black][PLAIN_SCORE] += 0.0  # Derrota negra = 0 puntos
+                results[game.black][PLAIN_SCORE] += tournament.lose_points 
+        
         elif game.result == Scores.BLACK:
             if game.black:
-                results[game.black][PLAIN_SCORE] += 1.0  # Victoria negra = 1 punto
-            results[game.white][PLAIN_SCORE] += 0.0  # Derrota blanca = 0 puntos
+                results[game.black][PLAIN_SCORE] += tournament.win_points 
+            results[game.white][PLAIN_SCORE] += tournament.lose_points 
+        
         elif game.result == Scores.DRAW:
-            results[game.white][PLAIN_SCORE] += 0.5  # Empate = 0.5 puntos
+            results[game.white][PLAIN_SCORE] += tournament.draw_points  
             if game.black:
-                results[game.black][PLAIN_SCORE] += 0.5  # Empate = 0.5 puntos
+                results[game.black][PLAIN_SCORE] += tournament.draw_points  
+        
+        # Casos de forfeit
+        elif game.result == Scores.FORFEITWIN:
+            results[game.white][PLAIN_SCORE] += tournament.win_points
+            if game.black:
+                results[game.black][PLAIN_SCORE] += tournament.lose_points 
+        
+        elif game.result == Scores.FORFEITLOSS:
+            if game.black:
+                results[game.black][PLAIN_SCORE] += tournament.win_points 
+            results[game.white][PLAIN_SCORE] += tournament.lose_points 
+        
+        # Casos de bye
+        elif game.result == Scores.BYE_H:
+            results[game.white][PLAIN_SCORE] += tournament.draw_points  
+        
+        elif game.result == Scores.BYE_F:
+            results[game.white][PLAIN_SCORE] += tournament.win_points  
+        
+        elif game.result == Scores.BYE_U:
+            results[game.white][PLAIN_SCORE] += tournament.win_points 
+        
+        elif game.result == Scores.BYE_Z:
+            pass  
+        
+       
+        elif game.result == Scores.NOAVAILABLE:
+            pass  
     
     return results
 
