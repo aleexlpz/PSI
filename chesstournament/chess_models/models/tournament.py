@@ -206,6 +206,7 @@ class Tournament(models.Model):
     def get_latest_round_with_games(self):
         """Devuelve la última ronda con partidas jugadas"""
         return self.round_set.filter(games__finished=True).order_by('-start_date').first()
+    
     def __str__(self):
         """Devuelve el nombre del torneo"""
         return self.name        

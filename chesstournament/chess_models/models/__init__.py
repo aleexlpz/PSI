@@ -20,87 +20,79 @@ def getScores(tournament):
     PLAIN_SCORE = RankingSystem.PLAIN_SCORE.value
     results = {}
     
+    # Inicializar todos los jugadores con 0 puntos
     players = tournament.getPlayers()
     for player in players:
         results[player] = {PLAIN_SCORE: 0.0}
     
-    
+    # Obtener todas las partidas terminadas del torneo
     games = Game.objects.filter(
         round__tournament=tournament,
         finished=True
     ).select_related('white', 'black')
     
     for game in games:
+        # Asignar puntos según el resultado
         if game.result == Scores.WHITE:
             results[game.white][PLAIN_SCORE] += tournament.win_points
-            if game.black:
-                results[game.black][PLAIN_SCORE] += tournament.lose_points 
+            if game.black in results:
+                results[game.black][PLAIN_SCORE] += tournament.lose_points
         
         elif game.result == Scores.BLACK:
-            if game.black:
-                results[game.black][PLAIN_SCORE] += tournament.win_points 
-            results[game.white][PLAIN_SCORE] += tournament.lose_points 
+            if game.black in results:
+                results[game.black][PLAIN_SCORE] += tournament.win_points
+            results[game.white][PLAIN_SCORE] += tournament.lose_points
         
         elif game.result == Scores.DRAW:
-            results[game.white][PLAIN_SCORE] += tournament.draw_points  
-            if game.black:
-                results[game.black][PLAIN_SCORE] += tournament.draw_points  
+            results[game.white][PLAIN_SCORE] += tournament.draw_points
+            if game.black in results:
+                results[game.black][PLAIN_SCORE] += tournament.draw_points
         
-        # Casos de forfeit
+        # Casos especiales (forfeits, byes)
         elif game.result == Scores.FORFEITWIN:
             results[game.white][PLAIN_SCORE] += tournament.win_points
-            if game.black:
-                results[game.black][PLAIN_SCORE] += tournament.lose_points 
         
         elif game.result == Scores.FORFEITLOSS:
-            if game.black:
-                results[game.black][PLAIN_SCORE] += tournament.win_points 
-            results[game.white][PLAIN_SCORE] += tournament.lose_points 
+            if game.black in results:
+                results[game.black][PLAIN_SCORE] += tournament.win_points
         
-        # Casos de bye
         elif game.result == Scores.BYE_H:
-            results[game.white][PLAIN_SCORE] += tournament.draw_points  
+            results[game.white][PLAIN_SCORE] += tournament.draw_points
         
         elif game.result == Scores.BYE_F:
-            results[game.white][PLAIN_SCORE] += tournament.win_points  
+            results[game.white][PLAIN_SCORE] += tournament.win_points
         
         elif game.result == Scores.BYE_U:
-            results[game.white][PLAIN_SCORE] += tournament.win_points 
+            results[game.white][PLAIN_SCORE] += tournament.win_points
         
-        elif game.result == Scores.BYE_Z:
-            pass  
-        
-       
-        elif game.result == Scores.NOAVAILABLE:
-            pass  
+        # BYE_Z y NOAVAILABLE no suman puntos
+        elif game.result in (Scores.BYE_Z, Scores.NOAVAILABLE):
+            pass
     
     return results
 
 def getBlackWins(tournament, results):
-    
     WINS = RankingSystem.WINS.value
     BLACKTIMES = RankingSystem.BLACKTIMES.value
     
-    # Inicializar contadores
-    players = tournament.getPlayers()
-    for player in players:
+    # Reiniciar contadores
+    for player in results:
         results[player][WINS] = 0
         results[player][BLACKTIMES] = 0
     
-    # Obtener todos los juegos terminados
     games = Game.objects.filter(
         round__tournament=tournament,
         finished=True
     ).select_related('white', 'black')
     
-    # Contar victorias y veces con negras
     for game in games:
+        # Contar victorias
         if game.result == Scores.WHITE:
             results[game.white][WINS] += 1
         elif game.result == Scores.BLACK and game.black:
             results[game.black][WINS] += 1
         
-        # Contar solo si el jugador con negras existe y no es un BYE
+        # Contar veces con negras (solo si no es un BYE)
         if game.black and str(game.black) != 'BYE1':
             results[game.black][BLACKTIMES] += 1
     
