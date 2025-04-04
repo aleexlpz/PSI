@@ -75,29 +75,29 @@ def getBlackWins(tournament, results):
     WINS = RankingSystem.WINS.value
     BLACKTIMES = RankingSystem.BLACKTIMES.value
     
-    # Reiniciar contadores
+    # Inicializar contadores
     for player in results:
         results[player][WINS] = 0
         results[player][BLACKTIMES] = 0
     
-    games = Game.objects.filter(
+    # Obtener solo partidas realmente jugadas (excluyendo forfeits y byes)
+    played_games = Game.objects.filter(
         round__tournament=tournament,
-        finished=True
+        finished=True,
+        result__in=[Scores.WHITE, Scores.BLACK, Scores.DRAW]
     ).select_related('white', 'black')
     
-    for game in games:
+    for game in played_games:
         # Contar victorias
         if game.result == Scores.WHITE:
             results[game.white][WINS] += 1
-        elif game.result == Scores.BLACK and game.black:
+        elif game.result == Scores.BLACK:
             results[game.black][WINS] += 1
         
-        # Contar veces con negras (solo si no es un BYE)
-        if game.black and str(game.black) != 'BYE1':
-            results[game.black][BLACKTIMES] += 1
+        # Contar veces con negras
+        results[game.black][BLACKTIMES] += 1
     
     return results
-
 def getRanking(tournament):
     
     # Obtener puntuaciones básicas

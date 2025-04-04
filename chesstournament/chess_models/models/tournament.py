@@ -207,6 +207,23 @@ class Tournament(models.Model):
         """Devuelve la última ronda con partidas jugadas"""
         return self.round_set.filter(games__finished=True).order_by('-start_date').first()
     
+    def removeFromRankingList(self, ranking_value):
+        """
+        Elimina un objeto RankingSystem del rankingList del torneo.
+        
+        Args:
+            ranking_value (str): Valor del RankingSystem a eliminar
+        """
+        try:
+            ranking_obj = RankingSystemClass.objects.get(value=ranking_value)
+            self.rankingList.remove(ranking_obj)
+        except RankingSystemClass.DoesNotExist:
+            pass  # Si no existe, no hay nada que eliminar
+
+    def cleanRankingList(self):
+        """Limpia completamente el campo rankingList del torneo"""
+        self.rankingList.clear()
+    
     def __str__(self):
         """Devuelve el nombre del torneo"""
         return self.name        
