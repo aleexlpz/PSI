@@ -12,7 +12,7 @@ try:
 except ImportError:
     pass
 
-from chess_models.constants import (TournamentSpeed, TournamentType,
+from chess_models.models.constants import (TournamentSpeed, TournamentType,
                                            TournamentBoardType, RankingSystem)
 
 
