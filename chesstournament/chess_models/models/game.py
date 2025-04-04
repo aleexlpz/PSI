@@ -130,7 +130,7 @@ def create_rounds(tournament, swissByes=[]):
         bool: True si se crearon las rondas correctamente, False en caso contrario
     """
     # Verificar que el torneo es de tipo ROUNDROBIN
-    if tournament.tournament_type != 'RR':
+    if tournament.tournament_type != 'SR':
         return False
     
     # Obtener todos los jugadores del torneo
@@ -168,7 +168,6 @@ def create_rounds(tournament, swissByes=[]):
                         white=white_player,
                         black=black_player,
                         round=round_obj,
-                        rankingOrder=0,  # Se actualizará más tarde
                         result=Scores.NOAVAILABLE
                     )
         return True

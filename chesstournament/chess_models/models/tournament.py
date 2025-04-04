@@ -107,12 +107,12 @@ class Tournament(models.Model):
         verbose_name="Sistemas de clasificación asociados"
     )
     
-    rounds = models.ManyToManyField(
+    round_set = models.ManyToManyField(
         'Round',
         through='TournamentRound',
         blank=True,
         verbose_name="Rondas programadas",
-        related_name='tournament_schedules'  # Nombre único
+        related_name='round_set'  
     )
 
     def getPlayers(self, sorted=False):

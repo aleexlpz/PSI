@@ -9,7 +9,7 @@ class Round(models.Model):
     tournament = models.ForeignKey(
         Tournament,
         on_delete=models.CASCADE,
-        related_name='round_set',
+        related_name='game_set',
         verbose_name="Torneo asociado"
     )
     
@@ -26,7 +26,6 @@ class Round(models.Model):
         verbose_name="Fecha de finalización"
     )
     
-    # Corrige el nombre del campo (fnish -> finish)
     finish = models.BooleanField(
         default=False,
         verbose_name="¿Ronda finalizada?"
