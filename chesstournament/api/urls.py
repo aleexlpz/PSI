@@ -3,25 +3,13 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    RefereeViewSet,
-    PlayerViewSet,
-    GameViewSet,
-    TournamentViewSet,
-    RoundViewSet,
-    CustomUserViewSet
+    RefereeViewSet, PlayerViewSet, GameViewSet, 
+    TournamentViewSet, RoundViewSet, CustomUserViewSet,
+    CreateRoundAPIView, SearchTournamentsAPIView,
+    TournamentCreateAPIView, GetRanking, GetPlayers,
+    GetRoundResults, UpdateLichessGameAPIView,
+    UpdateOTBGameAPIView, AdminUpdateGameAPIView
 )
-from .views import (
-    CreateRoundAPIView,
-    SearchTournamentsAPIView,
-    TournamentCreateAPIView,
-    GetRanking,
-    GetPlayers,
-    GetRoundResults,
-    UpdateLichessGameAPIView,
-    UpdateOTBGameAPIView,
-    AdminUpdateGameAPIView
-)
-
 
 router = DefaultRouter()
 router.register(r'referees', RefereeViewSet)
@@ -32,7 +20,7 @@ router.register(r'rounds', RoundViewSet)
 router.register(r'users', CustomUserViewSet)
 
 urlpatterns = [
-    path('api/v1/', include(router.urls)),
+    path('', include(router.urls)),
     path('create_round/', CreateRoundAPIView.as_view()),
     path('searchTournaments/', SearchTournamentsAPIView.as_view()),
     path('tournament_create/', TournamentCreateAPIView.as_view()),

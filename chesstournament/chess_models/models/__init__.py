@@ -4,7 +4,7 @@ from .player import Player, LichessAPIError
 from .referee import Referee
 from .tournament import Tournament, RankingSystemClass, TournamentRound
 from .round import Round
-from .game import Game, create_rounds  # Asegúrate de importar create_rounds desde game
+from .game import Game, create_rounds
 
 # Luego importa las constantes
 from chess_models.constants import (
@@ -13,7 +13,8 @@ from chess_models.constants import (
     TournamentBoardType, 
     RankingSystem,
     Scores,
-    Color
+    Color,
+    LICHESS_USERS
 )
 
 def getScores(tournament):

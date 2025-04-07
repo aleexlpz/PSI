@@ -119,7 +119,7 @@ class Game(models.Model):
     
 
 
-def create_rounds(tournament):
+def create_rounds(tournament, swissByes=[]):
     if tournament.tournament_type != 'SR':
         return
 

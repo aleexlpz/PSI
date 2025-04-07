@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'djoser',
+    'api',
 ]
 
 REST_FRAMEWORK = {
@@ -59,6 +60,12 @@ REST_FRAMEWORK = {
 }
 
 DJOSER = {
+    'USER_CREATE_PASSWORD_RETYPE': False,
+    'SEND_ACTIVATION_EMAIL': False,
+    'SERIALIZERS': {
+        'user': 'api.serializers.UserSerializer',
+        'current_user': 'api.serializers.UserSerializer',
+    },
     'PERMISSIONS': {
         'user_create': ['rest_framework.permissions.IsAuthenticated'],
     }

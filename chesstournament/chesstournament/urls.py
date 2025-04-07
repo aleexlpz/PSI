@@ -26,5 +26,6 @@ urlpatterns = [
     path('api/v1/auth_token/logout/', TokenDestroyView.as_view(), name='logout'),
     path('api/v1/', include('djoser.urls')),
     path('api/v1/', include('djoser.urls.authtoken')), 
+    path('api/v1/', include('api.urls')),
 
 ]

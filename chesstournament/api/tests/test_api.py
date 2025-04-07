@@ -35,6 +35,7 @@ class TournamentAPITest(TransactionTestCase):
         # before each test
         Tournament.objects.all().delete()
         self.client = APIClient()
+        self.admin_update_game_url = '/api/v1/admin_update_game/'
         self.user1 = User.objects.create_user(username='user1',
                                               password='testpassword')
 

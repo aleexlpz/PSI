@@ -96,7 +96,7 @@ class Tournament(models.Model):
     
     number_of_rounds_for_swiss = models.IntegerField(
         default=0,
-        verbose_name="Número de rondas para torneos suizos"
+        verbose_name="Número de rondas para torneos swiss"
     )
     
     rankingList = models.ManyToManyField(
@@ -223,12 +223,23 @@ class Tournament(models.Model):
     def cleanRankingList(self):
         """Limpia completamente el campo rankingList del torneo"""
         self.rankingList.clear()
+
+    def getGames(self):
+        """
+        Devuelve todas las partidas del torneo, accediendo a través de las rondas.
+        
+        Returns:
+            QuerySet: Todas las partidas del torneo.
+        """
+        from .game import Game  # Evita import circular
+
+        return Game.objects.filter(round__tournament=self)
     
     def __str__(self):
         """Devuelve el nombre del torneo"""
         return self.name        
 
-    
+
     
 
 class TournamentPlayers(models.Model):
