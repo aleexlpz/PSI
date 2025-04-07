@@ -35,7 +35,6 @@ class TournamentAPITest(TransactionTestCase):
         # before each test
         Tournament.objects.all().delete()
         self.client = APIClient()
-        self.admin_update_game_url = '/api/v1/admin_update_game/'
         self.user1 = User.objects.create_user(username='user1',
                                               password='testpassword')
 
@@ -225,7 +224,7 @@ class GameAPITest(TransactionTestCase):
             Note: this sgould not work if no login has been made
             """
         self.client.force_authenticate(user=self.user1)
-        tournament = Tournament.objects.create(name="tournament_1",)
+        tournament = Tournament.objects.create(name="tournament_1", administrativeUser=self.user1)
         round = Round.objects.create(name="round_1", tournament=tournament)
         player1 = Player.objects.create(name="player_1")
         player2 = Player.objects.create(name="player_2")
@@ -272,7 +271,8 @@ class GameAPITest(TransactionTestCase):
     def test_004_update(self):  # OK
         """Update a game withOUT login in and finished=False.
           It should work """
-        self.client.force_authenticate(user=self.user1)
+        # No need to login first
+        # self.client.force_authenticate(user=self.user1)
         tournament = Tournament.objects.create(name="tournament_1",)
         round = Round.objects.create(name="round_1", tournament=tournament)
         player1 = Player.objects.create(name="player_1")

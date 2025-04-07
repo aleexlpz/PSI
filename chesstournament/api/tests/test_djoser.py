@@ -37,6 +37,7 @@ class DjoserEndpointsTest(TestCase):
             'password': new_password,
         }
         response = self.client.post(BASE_URL + 'users/', data)
+        print(response.data)
 
         # Check if the user has been created successfully
         self.assertEqual(response.status_code,

@@ -1,6 +1,6 @@
 from chess_models.models import create_rounds, Scores
 from rest_framework import viewsets, permissions, pagination, status
-from chess_models.models import Tournament, Game, Player, TournamentBoardType, Round, Referee
+from chess_models.models import Tournament, RankingSystemClass, Player, TournamentBoardType, Round, Referee, Game
 from .serializers import TournamentSerializer, GameSerializer
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework.response import Response
@@ -20,7 +20,6 @@ class TournamentViewSet(viewsets.ModelViewSet):
     pagination_class = CustomPagination
     queryset = Tournament.objects.all().order_by('-start_date', '-id')
     serializer_class = TournamentSerializer
-    
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             self.permission_classes = []
@@ -38,18 +37,39 @@ class GameViewSet(viewsets.ModelViewSet):
     serializer_class = GameSerializer
     
     def get_permissions(self):
-        if self.action == 'update' and self.get_object().finished:
-            self.permission_classes = [permissions.IsAuthenticated]
+        if self.action == 'update' and self.get_object().finished == True:
+            self.permission_classes = permissions.IsAuthenticated
         return super().get_permissions()
     
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        if instance.finished and not request.user.is_staff:
+        if request.user.is_staff:
+            print("SOY STAFF")
+            super().update(request, *args, **kwargs) 
             return Response(
-                {"result": False, "message": "Only admin can update finished games"},
+                status=status.HTTP_200_OK,
+            )
+        elif not request.user.is_staff and instance.finished == True:
+            print("NOS SOY STAFF Y LA PARTIDA ESTA TERMINADA")
+            super().update(request, *args, **kwargs)
+            return Response(
+                {"result": False, "message": "Game is blocked, only administrator can update it"},
                 status=status.HTTP_403_FORBIDDEN
             )
-        return super().update(request, *args, **kwargs)
+        elif not request.user.is_staff and instance.finished == False:
+            print("NO SOY STAFF Y LA PARTIDA NO ESTA TERMINADA")
+            super().update(request, *args, **kwargs)
+            return Response(
+                {"result": True, "message": "Game updated"},
+                status=status.HTTP_200_OK,
+            )
+        else:
+            print("NO SOY NADA")
+            super().update(request, *args, **kwargs)
+            return Response(
+                {"result": False, "message": "Game is blocked, only administrator can update it"},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
 class RefereeViewSet(viewsets.ModelViewSet):
     queryset = Referee.objects.all()
@@ -129,9 +149,11 @@ class SearchTournamentsAPIView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 class TournamentCreateAPIView(APIView):
+    
     permission_classes = [permissions.IsAuthenticated]
     
     def post(self, request):
+        print("DATOS INICIO" + str(request.data))
         # Validar datos básicos
         name = request.data.get('name')
         if not name:
@@ -145,7 +167,7 @@ class TournamentCreateAPIView(APIView):
                 {"result": False, "message": "Tournament with this name already exists"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+        print("CREAR TORNEO")
         # Crear torneo
         tournament = Tournament(
             name=name,
@@ -194,6 +216,7 @@ class TournamentCreateAPIView(APIView):
                         tournament.players.add(player)
         
         serializer = TournamentSerializer(tournament)
+        print("DATOS" + serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
 class GetRanking(APIView):
@@ -338,7 +361,7 @@ class UpdateLichessGameAPIView(APIView):
             response = requests.get(url)
             if response.status_code != 200:
                 return Response(
-                    {"result": False, "message": "Error connecting to Lichess API"},
+                    {"result": False, "message": "Failed to fetch data for game"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
                 
@@ -350,7 +373,7 @@ class UpdateLichessGameAPIView(APIView):
             elif winner == 'black':
                 game.result = 'b'
             else:
-                game.result = 'd'
+                game.result = '='
                 
             game.finished = True
             game.save()
@@ -392,9 +415,9 @@ class UpdateOTBGameAPIView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
             
-        if otb_result not in ['W', 'B', 'D']:
+        if otb_result not in ['w', 'b', '=']:
             return Response(
-                {"result": False, "message": "Invalid result. Must be 'W', 'B' or 'D'"},
+                {"result": False, "message": "Invalid result. Must be 'w', 'b' or '='"},
                 status=status.HTTP_400_BAD_REQUEST
             )
             
@@ -428,9 +451,9 @@ class AdminUpdateGameAPIView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
             
-        if otb_result not in ['W', 'B', 'D']:
+        if otb_result not in ['w', 'b', '=']:
             return Response(
-                {"result": False, "message": "Invalid result. Must be 'W', 'B' or 'D'"},
+                {"result": False, "message": "Invalid result. Must be 'w', 'b' or '='"},
                 status=status.HTTP_400_BAD_REQUEST
             )
             

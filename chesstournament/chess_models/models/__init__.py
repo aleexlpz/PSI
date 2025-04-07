@@ -6,7 +6,7 @@ from .tournament import Tournament, RankingSystemClass, TournamentRound
 from .round import Round
 from .game import Game, create_rounds
 
-# Luego importa las constantes
+
 from chess_models.constants import (
     TournamentType, 
     TournamentSpeed, 
@@ -21,7 +21,7 @@ def getScores(tournament):
     PLAIN_SCORE = RankingSystem.PLAIN_SCORE.value
     results = {}
     
-    # Inicializar todos los jugadores con 0 puntos
+    
     players = tournament.getPlayers()
     for player in players:
         results[player] = {PLAIN_SCORE: 0.0}

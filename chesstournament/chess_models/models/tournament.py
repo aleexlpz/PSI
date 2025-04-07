@@ -2,7 +2,7 @@ from django.db import models
 from django.utils.timezone import now
 from chess_models.constants import TournamentSpeed, TournamentBoardType, RankingSystem, TournamentType
 from django.contrib.auth.models import User 
-
+import datetime as daytime
 class Tournament(models.Model):
     
     name = models.CharField(
@@ -35,12 +35,13 @@ class Tournament(models.Model):
     )
     
     start_date = models.DateField(
-        default=now,
+        default=daytime.date.today,
         null=True,
         verbose_name="Fecha de inicio"
     )
     
     end_date = models.DateField(
+        default=daytime.date.today,
         null=True,
         verbose_name="Fecha de finalización"
     )

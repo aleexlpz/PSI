@@ -6,6 +6,7 @@ from chess_models.models import (
     Round, Referee, RankingSystemClass
 )
 from django.contrib.auth.models import User
+from django.utils.timezone import localdate
 
 class PlayerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -23,25 +24,15 @@ class RoundSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class GameSerializer(serializers.ModelSerializer):
-    white = PlayerSerializer()
-    black = PlayerSerializer()
-    
     class Meta:
         model = Game
         fields = '__all__'
 
 class TournamentSerializer(serializers.ModelSerializer):
-    players = PlayerSerializer(many=True)
-    rankingList = serializers.SlugRelatedField(
-        many=True,
-        slug_field='value',
-        queryset=RankingSystemClass.objects.all()
-    )
-    
     class Meta:
         model = Tournament
-        fields = ['id', 'name', 'tournament_type', 'tournament_speed', 'board_type', 'rankingList', 'players']
-
+        fields = '__all__'
+        
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
