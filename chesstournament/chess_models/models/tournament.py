@@ -3,6 +3,7 @@ from django.utils.timezone import now
 from chess_models.constants import TournamentSpeed, TournamentBoardType, RankingSystem, TournamentType
 from django.contrib.auth.models import User 
 import datetime as daytime
+
 class Tournament(models.Model):
     
     name = models.CharField(
@@ -127,11 +128,7 @@ class Tournament(models.Model):
                 tournament=self
             ).order_by('registration_order')
             players = [rel.player for rel in through_relations]
-            
-            # Si tienes lichess_usernames, ordena a los jugadores según esa lista
-            if lichess_usernames:
-                players = sorted(players, key=lambda p: lichess_usernames.index(p.lichess_username))
-            
+
             return players
         else:
             if (self.tournament_speed == TournamentSpeed.RAPID and 
@@ -148,26 +145,6 @@ class Tournament(models.Model):
                 return list(self.players.order_by('-lichess_rating_classical'))
             else:
                 return list(self.players.order_by('name'))
-            
-    def add_player(self, player):
-        """
-        Agrega un jugador al torneo y asigna un orden de inscripción.
-        
-        Args:
-            player (Player): Instancia del jugador a agregar.
-            
-        Raises:
-            ValueError: Si el jugador ya está inscrito en el torneo.
-        """
-        last_order = TournamentPlayers.objects.filter(
-            tournament=self
-        ).aggregate(models.Max('registration_order'))['registration_order__max'] or 0
-        
-        TournamentPlayers.objects.create(
-            tournament=self,
-            player=player,
-            registration_order=last_order + 1
-        )
         
     def getPlayersCount(self):
         """
@@ -182,9 +159,6 @@ class Tournament(models.Model):
         """Limpia el campo rankingList del torneo"""
         self.rankingList.clear()
         
-    def getRankingList(self):
-        """Devuelve la lista de sistemas de clasificación asociados al torneo"""
-        return self.rankingList.all()
     
     def addToRankingList(self, ranking_value):
         """
@@ -215,11 +189,8 @@ class Tournament(models.Model):
         Args:
             ranking_value (str): Valor del RankingSystem a eliminar
         """
-        try:
-            ranking_obj = RankingSystemClass.objects.get(value=ranking_value)
-            self.rankingList.remove(ranking_obj)
-        except RankingSystemClass.DoesNotExist:
-            pass  # Si no existe, no hay nada que eliminar
+        ranking_obj = RankingSystemClass.objects.get(value=ranking_value)
+        self.rankingList.remove(ranking_obj)
 
     def cleanRankingList(self):
         """Limpia completamente el campo rankingList del torneo"""
@@ -232,7 +203,7 @@ class Tournament(models.Model):
         Returns:
             QuerySet: Todas las partidas del torneo.
         """
-        from .game import Game  # Evita import circular
+        from .game import Game 
 
         return Game.objects.filter(round__tournament=self)
     

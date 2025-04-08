@@ -26,14 +26,13 @@ def getScores(tournament):
     for player in players:
         results[player] = {PLAIN_SCORE: 0.0}
     
-    # Obtener todas las partidas terminadas del torneo
     games = Game.objects.filter(
         round__tournament=tournament,
         finished=True
     ).select_related('white', 'black')
     
     for game in games:
-        # Asignar puntos según el resultado
+       
         if game.result == Scores.WHITE:
             results[game.white][PLAIN_SCORE] += tournament.win_points
             if game.black in results:
@@ -49,7 +48,6 @@ def getScores(tournament):
             if game.black in results:
                 results[game.black][PLAIN_SCORE] += tournament.draw_points
         
-        # Casos especiales (forfeits, byes)
         elif game.result == Scores.FORFEITWIN:
             results[game.white][PLAIN_SCORE] += tournament.win_points
         
@@ -65,11 +63,7 @@ def getScores(tournament):
         
         elif game.result == Scores.BYE_U:
             results[game.white][PLAIN_SCORE] += tournament.win_points
-        
-        # BYE_Z y NOAVAILABLE no suman puntos
-        elif game.result in (Scores.BYE_Z, Scores.NOAVAILABLE):
-            pass
-    
+            
     return results
 
 def getBlackWins(tournament, results):
@@ -125,24 +119,6 @@ def getRanking(tournament):
         if round.game_set.filter(finished=True).exists():
             rounds_completed = True
             break
-
-    if not rounds_completed:
-        unranked_players = {}
-        rank_counter = 1
-        for data in ranking_list:
-            player = data["player"]
-            player_stats = {
-                "rank": rank_counter,
-                plain_score_field: data["plain_score"]
-            }
-
-            for criterion in ranking_criteria:
-                player_stats[criterion] = data[criterion]
-
-            unranked_players[player] = player_stats
-            rank_counter += 1
-
-        return unranked_players
 
     def sort_by_ranking(entry):
         values = [-entry.get("plain_score", 0)]

@@ -79,45 +79,34 @@ class Game(models.Model):
         return f"{white_info} vs {black_info} = {result_str}"
 
     def get_lichess_game_result(self, lichess_game_id):
-        try:
-            # Mock response para pruebas
-            if lichess_game_id == 'HsdNrFxG':  # ID usado en el test
-                return Scores.WHITE, 'alpega', 'fernanfer'
-            if lichess_game_id == 'kJfWZqUL':  # ID para test de error
-                raise LichessAPIError("Los jugadores no coinciden con la partida de Lichess")
-            if len(lichess_game_id) > 20:  # ID inválido
-                raise LichessAPIError("Error de conexión con Lichess")
+        
+        if len(lichess_game_id) > 20:
+            raise LichessAPIError("Error de conexión con Lichess")
 
-            # Código real para producción
-            url = f"https://lichess.org/api/game/{lichess_game_id}"
-            response = requests.get(url, timeout=5)
-            
-            if response.status_code == 404:
-                raise LichessAPIError("Partida no encontrada en Lichess")
-            response.raise_for_status()
-            
-            data = response.json()
-            white_user = data.get('players', {}).get('white', {}).get('user', {}).get('name', '')
-            black_user = data.get('players', {}).get('black', {}).get('user', {}).get('name', '')
-            
-            if not white_user or not black_user:
-                raise LichessAPIError("No se pudieron obtener los nombres de los jugadores")
-                
-            winner = data.get('winner')
-            
-            if winner == 'white':
-                return Scores.WHITE, white_user, black_user
-            elif winner == 'black':
-                return Scores.BLACK, white_user, black_user
-            else:
-                return Scores.DRAW, white_user, black_user
-                
-        except requests.RequestException as e:
-            raise LichessAPIError(f"Error de conexión con Lichess: {str(e)}")
-            
-    from chess_models.tests.constants import lichess_usernames_6
-    
+        url = f"https://lichess.org/api/game/{lichess_game_id}"
+        
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
 
+        data = response.json()
+
+        players = data.get('players', {})
+        white_user = players.get('white', {}).get('userId', '')
+        black_user = players.get('black', {}).get('userId', '')
+
+        if not white_user or not black_user:
+            raise LichessAPIError("No se pudieron obtener los nombres de los jugadores")
+
+        if white_user != self.white.lichess_username or black_user != self.black.lichess_username:
+            raise LichessAPIError("Los jugadores no coinciden con los jugadores de la partida de Lichess")
+
+        winner = data.get('winner')
+
+        if winner == 'white':
+            return Scores.WHITE, white_user, black_user
+        elif winner == 'black':
+            return Scores.BLACK, white_user, black_user
+        return Scores.DRAW, white_user, black_user
 
 def create_rounds(tournament, swissByes=[]):
     if tournament.tournament_type != 'SR':

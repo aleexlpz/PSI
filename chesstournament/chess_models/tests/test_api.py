@@ -920,7 +920,7 @@ class GetRankingAPIViewTest(TransactionTestCase):
         self.tournament.cleanRankingList()
         self.tournament.addToRankingList(RankingSystem.WINS.value)
         self.tournament.addToRankingList(RankingSystem.BLACKTIMES.value)
-
+        
         response = self.client.get(
             self.create_get_ranking_url + f'{tournament_id}/')
         data = response.json()

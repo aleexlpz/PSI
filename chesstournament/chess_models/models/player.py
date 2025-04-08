@@ -146,14 +146,11 @@ class Player(models.Model):
 
     def check_lichess_user_exists(self):
         """Verifica si el usuario de Lichess existe. Devuelve True si existe, False en caso contrario."""
-        try:
-            response = requests.get(
-                f"https://lichess.org/api/user/{self.lichess_username}",
-                timeout=5
-            )
-            return response.status_code == 200
-        except requests.RequestException:
-            return False  # Si hay error de conexión, asumimos que no existe
+        response = requests.get(
+            f"https://lichess.org/api/user/{self.lichess_username}",
+            timeout=5
+        )
+        return response.status_code == 200
 
     def get_lichess_user_ratings(self):
         try:
