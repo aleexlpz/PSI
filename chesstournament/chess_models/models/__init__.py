@@ -100,37 +100,79 @@ def getBlackWins(tournament, results):
     
     return results
 def getRanking(tournament):
-    
-    # Obtener puntuaciones básicas
-    results = getScores(tournament)
-    
-    # Añadir estadísticas de victorias y veces con negras
-    results = getBlackWins(tournament, results)
-    
-    # Ordenar jugadores según criterios del torneo
-    ranking_systems = [rs.value for rs in tournament.rankingList.all()]
-    if not ranking_systems:
-        ranking_systems = [RankingSystem.PLAIN_SCORE.value]
-    
-    players = list(results.keys())
-    
-    def sort_key(player):
-        key = []
-        for system in ranking_systems:
-            if system == RankingSystem.PLAIN_SCORE.value:
-                key.append(-results[player].get(system, 0))  # Orden descendente
-            elif system == RankingSystem.WINS.value:
-                key.append(-results[player].get(system, 0))  # Orden descendente
-            elif system == RankingSystem.BLACKTIMES.value:
-                key.append(results[player].get(system, 0))   # Orden ascendente
+    player_scores = getScores(tournament)
+    player_scores = getBlackWins(tournament, player_scores)
+
+    plain_score_field = RankingSystem.PLAIN_SCORE.value
+    ranking_criteria = [criterion.value for criterion in tournament.rankingList.all()]
+
+    players = tournament.getPlayers(sorted=True)
+    ranking_list = []
+
+    for player in players:
+        player_data = {
+            "player": player,
+            "plain_score": player_scores[player][plain_score_field],
+        }
+
+        for criterion in ranking_criteria:
+            player_data[criterion] = player_scores[player].get(criterion, 0)
+
+        ranking_list.append(player_data)
+
+    rounds_completed = False
+    for round in tournament.round_set.all():
+        if round.game_set.filter(finished=True).exists():
+            rounds_completed = True
+            break
+
+    if not rounds_completed:
+        unranked_players = {}
+        rank_counter = 1
+        for data in ranking_list:
+            player = data["player"]
+            player_stats = {
+                "rank": rank_counter,
+                plain_score_field: data["plain_score"]
+            }
+
+            for criterion in ranking_criteria:
+                player_stats[criterion] = data[criterion]
+
+            unranked_players[player] = player_stats
+            rank_counter += 1
+
+        return unranked_players
+
+    def sort_by_ranking(entry):
+        values = [-entry.get("plain_score", 0)]
+        for criterion in ranking_criteria:
+            value = entry.get(criterion, 0)   
+            if isinstance(value, (int, float)):
+                values.append(-value)
             else:
-                key.append(0)
-        return tuple(key)
-    
-    players.sort(key=sort_key)
-    
-    # Asignar posiciones finales
-    for i, player in enumerate(players, 1):
-        results[player]['rank'] = i
-    
-    return results
+                values.append(value) 
+        return tuple(values)
+
+    ranking_list.sort(key=sort_by_ranking)
+
+    ranked_players = {}
+    rank_counter = 1
+    for data in ranking_list:
+        player = data["player"]
+        player_stats = {
+            "rank": rank_counter,
+            plain_score_field: data["plain_score"]
+        }
+
+        for criterion in ranking_criteria:
+            player_stats[criterion] = data[criterion]
+
+        ranked_players[player] = player_stats
+        rank_counter += 1
+
+    return ranked_players
+
+
+
+

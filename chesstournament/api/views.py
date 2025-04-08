@@ -2,13 +2,18 @@ from chess_models.models import create_rounds, Scores
 from rest_framework import viewsets, permissions, pagination, status
 from chess_models.models import Tournament, RankingSystemClass, Player, TournamentBoardType, Round, Referee, Game
 from .serializers import TournamentSerializer, GameSerializer
-from djoser.views import UserViewSet as DjoserUserViewSet
+from djoser.views import UserViewSet
 from rest_framework.response import Response
 from io import StringIO
 import csv
 import requests
 from rest_framework.views import APIView
 from chess_models.models import getRanking
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import MethodNotAllowed
+
 
 
 class CustomPagination(pagination.PageNumberPagination):
@@ -25,51 +30,40 @@ class TournamentViewSet(viewsets.ModelViewSet):
             self.permission_classes = []
         return super().get_permissions()
     
-class CustomUserViewSet(DjoserUserViewSet):
-    def create(self, request, *args, **kwargs):
-        return Response(
-            {"result": False, "message": "User creation is not allowed via API"},
-            status=status.HTTP_403_FORBIDDEN
-        )
+class CustomUserViewSet(UserViewSet):   
     
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def create(self, request, *args, **kwargs):
+        raise MethodNotAllowed('POST', detail="Creating users is not allowed through this API.")
+    
+
+
 class GameViewSet(viewsets.ModelViewSet):
     queryset = Game.objects.all()
     serializer_class = GameSerializer
-    
+
     def get_permissions(self):
-        if self.action == 'update' and self.get_object().finished == True:
-            self.permission_classes = permissions.IsAuthenticated
-        return super().get_permissions()
-    
+        if self.action == 'update' or self.action == 'partial_update':
+            return []
+        return [permissions.IsAuthenticated()]
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        if request.user.is_staff:
-            print("SOY STAFF")
-            super().update(request, *args, **kwargs) 
-            return Response(
-                status=status.HTTP_200_OK,
-            )
-        elif not request.user.is_staff and instance.finished == True:
-            print("NOS SOY STAFF Y LA PARTIDA ESTA TERMINADA")
-            super().update(request, *args, **kwargs)
-            return Response(
-                {"result": False, "message": "Game is blocked, only administrator can update it"},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        elif not request.user.is_staff and instance.finished == False:
-            print("NO SOY STAFF Y LA PARTIDA NO ESTA TERMINADA")
-            super().update(request, *args, **kwargs)
-            return Response(
-                {"result": True, "message": "Game updated"},
-                status=status.HTTP_200_OK,
-            )
-        else:
-            print("NO SOY NADA")
-            super().update(request, *args, **kwargs)
-            return Response(
-                {"result": False, "message": "Game is blocked, only administrator can update it"},
-                status=status.HTTP_403_FORBIDDEN
-            )
+
+        if instance.finished:
+            if not request.user or not request.user.is_authenticated:
+                raise PermissionDenied("You don't have permission to update this game.")
+
+        response = super().update(request, *args, **kwargs)
+
+        if not instance.finished:
+            instance.refresh_from_db()
+            instance.finished = True
+            instance.save()
+
+        return response
+
 
 class RefereeViewSet(viewsets.ModelViewSet):
     queryset = Referee.objects.all()
@@ -143,7 +137,7 @@ class SearchTournamentsAPIView(APIView):
             
         tournaments = Tournament.objects.filter(
             name__icontains=search_string
-        ).order_by('-start_date')
+        ).order_by('-name')
         
         serializer = TournamentSerializer(tournaments, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -221,7 +215,6 @@ class TournamentCreateAPIView(APIView):
     
 class GetRanking(APIView):
     permission_classes = []
-    
     def get(self, request, tournament_id):
         try:
             tournament = Tournament.objects.get(id=tournament_id)
@@ -337,11 +330,12 @@ class GetRoundResults(APIView):
 class UpdateLichessGameAPIView(APIView):
     permission_classes = []
     authentication_classes = []
-    
+
     def post(self, request):
         game_id = request.data.get('game_id')
         lichess_game_id = request.data.get('lichess_game_id')
-        
+
+        # Validar juego local
         try:
             game = Game.objects.get(id=game_id)
         except Game.DoesNotExist:
@@ -349,42 +343,73 @@ class UpdateLichessGameAPIView(APIView):
                 {"result": False, "message": "Game does not exist"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-            
+
+        # Bloqueo por finalizado
         if game.finished:
             return Response(
                 {"result": False, "message": "Game is blocked, only administrator can update it"},
                 status=status.HTTP_403_FORBIDDEN
             )
-            
+
         try:
-            url = f"https://lichess.org/api/game/{lichess_game_id}"
-            response = requests.get(url)
+            url = f"https://lichess.org/game/export/{lichess_game_id}"
+            headers = {"Accept": "application/json"}
+            response = requests.get(url, headers=headers)
+
             if response.status_code != 200:
                 return Response(
                     {"result": False, "message": "Failed to fetch data for game"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-                
+
             data = response.json()
-            winner = data.get('winner')
-            
+
+            # Lichess usernames
+            lichess_white = data.get('players', {}).get('white', {}).get('user', {}).get('id')
+            lichess_black = data.get('players', {}).get('black', {}).get('user', {}).get('id')
+
+            if not lichess_white or not lichess_black:
+                return Response(
+                    {"result": False, "message": "Could not determine players from Lichess game"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Comparar jugadores
+            expected_white = game.white.lichess_username
+            expected_black = game.black.lichess_username
+
+            if (lichess_white.lower() != expected_white.lower() or
+                lichess_black.lower() != expected_black.lower()):
+                return Response(
+                    {
+                        "result": False,
+                        "message": f"Players for game {lichess_game_id} are different: "
+                                   f"expected {expected_white} vs {expected_black}, got {lichess_white} vs {lichess_black}"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Obtener resultado
+            winner = data.get('winner', None)  # puede no estar si es empate
+
             if winner == 'white':
                 game.result = 'w'
             elif winner == 'black':
                 game.result = 'b'
             else:
-                game.result = '='
-                
+                game.result = '='  # empate o sin ganador
+
             game.finished = True
             game.save()
-            
-            return Response({"result": True}, status=status.HTTP_200_OK)
-            
+
+            return Response({"result": True, "message": "Game successfully updated"}, status=status.HTTP_200_OK)
+
         except Exception as e:
             return Response(
-                {"result": False, "message": str(e)},
+                {"result": False, "message": f"Error contacting Lichess: {str(e)}"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
         
 class UpdateOTBGameAPIView(APIView):
     permission_classes = []

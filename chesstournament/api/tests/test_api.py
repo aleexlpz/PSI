@@ -920,12 +920,10 @@ class GetRankingAPIViewTest(TransactionTestCase):
         self.tournament.cleanRankingList()
         self.tournament.addToRankingList(RankingSystem.WINS.value)
         self.tournament.addToRankingList(RankingSystem.BLACKTIMES.value)
-        # data = {'tournament_id': tournament_id}
 
         response = self.client.get(
             self.create_get_ranking_url + f'{tournament_id}/')
         data = response.json()
-        # print("data", data)
         playerD = {}
         playerD[ 2] = {'name': 'Bruno',    'score': 4.0, 'wins': 3, # noqa E201
                        'blacktimes': 3, 'rank': 1}
@@ -959,9 +957,9 @@ class GetRankingAPIViewTest(TransactionTestCase):
                        'blacktimes': 1, 'rank': 15}  # noqa E201
         playerD[10] = {'name': 'Lais',     'score': 1.0, 'wins': 1, # noqa E201 
                        'blacktimes': 3, 'rank': 16}  # noqa E201
-
+        #print("data", data.items())
         for k, v in data.items():
-            # print(k, v)
+            #print(k, v)
             self.assertEqual(v['score'],
                              playerD[v['id']]['score'])
             self.assertEqual(

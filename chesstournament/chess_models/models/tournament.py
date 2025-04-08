@@ -134,7 +134,6 @@ class Tournament(models.Model):
             
             return players
         else:
-            # Lógica existente de ordenamiento por ratings
             if (self.tournament_speed == TournamentSpeed.RAPID and 
                 self.board_type == TournamentBoardType.LICHESS):
                 return list(self.players.order_by('-lichess_rating_rapid'))
@@ -144,8 +143,9 @@ class Tournament(models.Model):
             elif (self.tournament_speed == TournamentSpeed.BULLET and 
                 self.board_type == TournamentBoardType.LICHESS):
                 return list(self.players.order_by('-lichess_rating_bullet'))
-            elif self.board_type == TournamentBoardType.OTB:
-                return list(self.players.order_by('-fide_rating'))
+            elif (self.tournament_speed == TournamentSpeed.CLASSICAL and
+                self.board_type == TournamentBoardType.LICHESS):
+                return list(self.players.order_by('-lichess_rating_classical'))
             else:
                 return list(self.players.order_by('name'))
             
@@ -239,8 +239,6 @@ class Tournament(models.Model):
     def __str__(self):
         """Devuelve el nombre del torneo"""
         return self.name        
-
-
     
 
 class TournamentPlayers(models.Model):
