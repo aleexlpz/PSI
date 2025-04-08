@@ -98,14 +98,12 @@ class Player(models.Model):
         self._saving = True
         
         try:
-            # Buscar jugador existente por lichess_username (si existe)
             if self.lichess_username and self.lichess_username != '':
                 existing = Player.objects.filter(
                     lichess_username=self.lichess_username
                 ).exclude(pk=self.pk).first()
                 
                 if existing:
-                    # Actualizar campos del jugador existente
                     for field in self._meta.fields:
                         if field.name not in ['id', 'creation_date']:
                             setattr(existing, field.name, getattr(self, field.name))
@@ -113,7 +111,6 @@ class Player(models.Model):
                     self.pk = existing.pk
                     return
 
-            # Buscar por email y name (si ambos existen)
             if self.email and self.name:
                 existing = Player.objects.filter(
                     email=self.email,
@@ -121,7 +118,6 @@ class Player(models.Model):
                 ).exclude(pk=self.pk).first()
                 
                 if existing:
-                    # Actualizar campos del jugador existente
                     for field in self._meta.fields:
                         if field.name not in ['id', 'creation_date']:
                             setattr(existing, field.name, getattr(self, field.name))
@@ -129,7 +125,6 @@ class Player(models.Model):
                     self.pk = existing.pk
                     return
 
-            # Manejo de campos vacíos
             if self.lichess_username == '':
                 if Player.objects.filter(lichess_username='').exclude(pk=self.pk).exists():
                     self.lichess_username = f"temp-{uuid.uuid4().hex[:8]}"
@@ -155,7 +150,7 @@ class Player(models.Model):
     def get_lichess_user_ratings(self):
         try:
             response = requests.get(f"https://lichess.org/api/user/{self.lichess_username}", timeout=5)
-            response.raise_for_status()  # Esto lanza HTTPError para códigos 4XX/5XX
+            response.raise_for_status()
             data = response.json()
             
             self.lichess_rating_bullet = data.get('perfs', {}).get('bullet', {}).get('rating', 0)

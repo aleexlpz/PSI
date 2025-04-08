@@ -63,11 +63,9 @@ class Game(models.Model):
     )
     
     def __str__(self):
-        # Verificar si los jugadores están asignados
         white_info = f"{self.white.lichess_username}({self.white.id})" if self.white else "None"
         black_info = f"{self.black.lichess_username}({self.black.id})" if self.black else "None"
         
-        # Mapear el resultado a texto
         result_mapping = {
             Scores.WHITE: "White",
             Scores.BLACK: "Black", 

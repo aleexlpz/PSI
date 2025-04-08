@@ -123,7 +123,6 @@ class Tournament(models.Model):
             QuerySet: Lista de jugadores, ordenados o no según parámetro.
         """
         if not sorted:
-            # Orden por inscripción usando el modelo intermedio
             through_relations = TournamentPlayers.objects.filter(
                 tournament=self
             ).order_by('registration_order')
