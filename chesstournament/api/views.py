@@ -205,11 +205,9 @@ class UpdateLichessGameAPIView(APIView):
 
         data = response.json()
 
-        # Lichess usernames
         lichess_white = data.get('players', {}).get('white', {}).get('user', {}).get('id')
         lichess_black = data.get('players', {}).get('black', {}).get('user', {}).get('id')
 
-        # Comparar jugadores
         expected_white = game.white.lichess_username
         expected_black = game.black.lichess_username
 
@@ -224,15 +222,14 @@ class UpdateLichessGameAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Obtener resultado
-        winner = data.get('winner', None)  # puede no estar si es empate
+        winner = data.get('winner', None)
 
         if winner == 'white':
             game.result = 'w'
         elif winner == 'black':
             game.result = 'b'
         else:
-            game.result = '='  # empate o sin ganador
+            game.result = '='
 
         game.finished = True
         game.save()
