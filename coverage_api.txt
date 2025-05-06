@@ -1,0 +1,12 @@
+Name                         Stmts   Miss  Cover   Missing
+----------------------------------------------------------
+api/__init__.py                  0      0   100%
+api/admin.py                     1      0   100%
+api/apps.py                      4      0   100%
+api/migrations/__init__.py       0      0   100%
+api/models.py                    1      0   100%
+api/serializers.py              28      0   100%
+api/urls.py                     11      0   100%
+api/views.py                   162      8    95%   38, 101, 121-122, 157-174, 191, 255
+----------------------------------------------------------
+TOTAL                          207      8    96%

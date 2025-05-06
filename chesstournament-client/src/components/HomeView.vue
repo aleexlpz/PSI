@@ -1,7 +1,20 @@
 <template>
   <div class="chess-app">
     <main class="main-content">
-      <div class="welcome-section">
+      <div v-if="authStore.isAuthenticated" class="admin-section">
+        <p>Hello, you are logged in as an administrator. Remember, with great power comes great responsibility.</p>
+        <p>As an administrator, you can create tournaments and edit or update the results of games, rounds, and tournaments.</p>
+        <p>To create a new tournament, press the <span class="bold-text">"Create Tournament"</span> button. To edit or update games, rounds, or tournaments, select the desired tournament.</p>
+        <!-- Botón para redirigir a /createTournament -->
+        <router-link to="/createTournament" class="create-tournament-button">
+          Create Tournament
+        </router-link>
+      </div>
+      <div v-else class="welcome-section">
+        <p>Welcome to the Chess Tournament Database. This database features the unique ability for players to update the results of their games. To create tournaments, an administrative account is required. However, any player can enter the result of a game.</p>
+        <p>You can use the search button to find tournaments by name. For further information, please refer to the <router-link to="/faq" class="text-link"><u>FAQ</u></router-link> section.</p>
+      </div>
+      <div v-else class="welcome-section">
         <p>Welcome to the Chess Tournament Database. This database features the unique ability for players to update the results of their games. To create tournaments, an administrative account is required. However, any player can enter the result of a game.</p>
         <p>You can use the search button to find tournaments by name. For further information, please refer to the<router-link to="/faq" class="text-link"><u>FAQ</u></router-link>section.</p>
       </div>
@@ -19,7 +32,7 @@
             <tbody>
               <tr v-for="tournament in paginatedTorneos" :key="tournament.id">
                 <td>
-                  <router-link :to="`/tournament/${tournament.id}`" class="tournament-link">
+                  <router-link :to="`tournamentdetail/${tournament.id}`" class="tournament-link">
                     {{ tournament.name }}
                   </router-link>
                 </td>
@@ -90,6 +103,7 @@
 
 <script setup>
 import { computed, ref, inject } from 'vue'
+import { useAuthStore } from '@/stores/auth'
 
 const torneos = inject('torneos') || ref([])
 const searchQuery = ref('')
@@ -126,6 +140,8 @@ const goToPage = (page) => {
     currentPage.value = page
   }
 }
+
+const authStore = useAuthStore()
 </script>
 
 <style scoped>
@@ -154,6 +170,36 @@ const goToPage = (page) => {
 .text-link:hover {
   color: #2c0083;
   text-decoration: underline;
+}
+
+.create-tournament-button {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.create-tournament-button:hover {
+  background-color: #0056b3;
+}
+
+.admin-section {
+  text-align: justify;
+  margin-bottom: 40px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  font-size: 1.7rem;
+  display: flex; /* Activa el modelo flexbox */
+  flex-direction: column; /* Asegura que los elementos estén en columna */
+  align-items: center; /* Centra horizontalmente los elementos */
 }
 
 .welcome-section {

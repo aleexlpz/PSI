@@ -1,98 +1,94 @@
 <template>
   <div class="tournament-detail">
-    <h1>Tournament: {{ tournament.name }}</h1>
+    <h1>Tournament: <em>{{ tournament.name }}</em></h1>
     
-    <button @click="refreshData" data-cy="refresh-button">Refresh Page</button>
+    
+    <button @click="refreshData" class="refresh-btn" data-cy="refresh-button">
+      Refresh Page
+    </button>
 
-    <div class="tabs">
-      <button 
-        @click="activeTab = 'standings'" 
-        :class="{ active: activeTab === 'standings' }"
-        data-cy="standings-tab"
-      >
-        Standing
-      </button>
-      <button 
-        @click="activeTab = 'pairings'" 
-        :class="{ active: activeTab === 'pairings' }"
-        data-cy="pairings-tab"
-      >
-        Pairings/Results
-      </button>
-    </div>
+    <p class="instructions">Click the accordions below to expand/collapse the content.</p>
 
-    <div v-if="activeTab === 'standings'" class="standings">
-      <h2>Current Standings</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Position</th>
-            <th>Player</th>
-            <th>Points</th>
-            <th v-for="tiebreak in tournament.tiebreak_methods" :key="tiebreak">
-              {{ tiebreak }}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(player, index) in standings" :key="player.id">
-            <td>{{ index + 1 }}</td>
-            <td>{{ player.name }}</td>
-            <td>{{ player.points }}</td>
-            <td v-for="tiebreak in tournament.tiebreak_methods" :key="tiebreak">
-              {{ player[tiebreak.toLowerCase()] || '-' }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <hr class="divider">
 
-    <div v-else class="pairings">
-      <h2>{{ tournament.board_type === 'LIC' ? 'LICHESS' : 'OTB' }}</h2>
-      <p>The abbreviations used in the "result" column are explained at the end of the page.</p>
-      
-      <div v-for="round in tournament.rounds" :key="round.number" class="round">
-        <h3>Round {{ round.number }}</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Table</th>
-              <th>White</th>
-              <th>Result</th>
-              <th>Black</th>
-              <th v-if="authStore.isAdmin">Result (Admin)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="game in round.games" :key="game.id">
-              <td>{{ game.table_number }}</td>
-              <td>{{ game.white_player.name }}</td>
-              <td>
-                <span v-if="game.result">{{ game.result }}</span>
-                <button 
-                  v-else 
-                  @click="openResultModal(game)"
-                  data-cy="update-result-btn"
-                >
-                  Enter Result
-                </button>
-              </td>
-              <td>{{ game.black_player.name }}</td>
-              <td v-if="authStore.isAdmin">
-                <select 
-                  v-model="game.result" 
-                  @change="updateGameResult(game)"
-                  data-cy="admin-result-select"
-                >
-                  <option value="">-</option>
-                  <option value="1-0">1-0 (White wins)</option>
-                  <option value="0-1">0-1 (Black wins)</option>
-                  <option value="½-½">½-½ (Draw)</option>
-                </select>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+    <div class="accordion-container">
+      <!-- Standing Accordion -->
+      <div class="accordion-item" :class="{ active: activeAccordion === 'standing' }">
+        <div class="accordion-header" @click="toggleAccordion('standing')">
+          <h2>Standing</h2>
+          <span class="accordion-icon">{{ activeAccordion === 'standing' ? '−' : '+' }}</span>
+        </div>
+        <transition name="slide">
+          <div class="accordion-content" v-show="activeAccordion === 'standing'">
+            <table class="standings-table">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Name</th>
+                  <th>Score</th>
+                  <th>Buchholz</th>
+                  <th>No. games played with Black</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{{ tournament.name }}</td>
+                  <td>{{ tournament.name }}</td>
+                  <td>{{ tournament.name }}</td>
+                  <td>{{ tournament.name }}</td>
+                  <td>{{ tournament.name }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </transition>
+      </div>
+
+      <!-- Pairings/Results Accordion -->
+      <div class="accordion-item" :class="{ active: activeAccordion === 'pairings' }">
+        <div class="accordion-header" @click="toggleAccordion('pairings')">
+          <h2>Pairings/Results</h2>
+          <span class="accordion-icon">{{ activeAccordion === 'pairings' ? '−' : '+' }}</span>
+        </div>
+        <transition name="slide">
+          <div class="accordion-content" v-show="activeAccordion === 'pairings'">
+            <div class="board-type-indicator">
+              {{ tournament.board_type === 'LIC' ? 'LICHESS' : 'OTB' }}
+            </div>
+            
+            <p class="instructions">
+              The abbreviations used in the "result" column are explained at the end of the page.<br>
+              Press <span class="result-btn">✅</span> to update the game result. See the FAQ for more information.
+            </p>
+
+            <div v-for="round in tournament.rounds" :key="round.number" class="round-section">
+              <h3>round_{{ String(round.number).padStart(3, '0') }}</h3>
+              <table class="pairings-table">
+                <thead>
+                  <tr>
+                    <th>Table</th>
+                    <th>White</th>
+                    <th>Result</th>
+                    <th>Black</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="game in round.games" :key="game.id">
+                    <td>{{ game.table_number || '-' }}</td>
+                    <td>{{ game.white_player.name }}</td>
+                    <td>
+                      <span v-if="game.result">{{ game.result }}</span>
+                      <button v-else @click="openResultModal(game)" class="result-btn">
+                        choose result
+                      </button>
+                    </td>
+                    <td>{{ game.black_player.name }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </transition>
       </div>
     </div>
 
@@ -104,7 +100,8 @@
         
         <div class="form-group">
           <label>Result:</label>
-          <select v-model="resultInput" data-cy="result-select">
+          <select v-model="resultInput" class="form-select" data-cy="result-select">
+            <option value="">Select result</option>
             <option value="1-0">1-0 (White wins)</option>
             <option value="0-1">0-1 (Black wins)</option>
             <option value="½-½">½-½ (Draw)</option>
@@ -116,13 +113,19 @@
           <input 
             v-model="playerEmail" 
             type="email" 
+            class="form-input"
+            placeholder="Enter your registered email"
             data-cy="player-email-input"
           >
         </div>
 
         <div class="modal-actions">
-          <button @click="submitResult" data-cy="submit-result-btn">Submit</button>
-          <button @click="closeModal">Cancel</button>
+          <button @click="submitResult" class="modal-btn submit-btn" data-cy="submit-result-btn">
+            Submit
+          </button>
+          <button @click="closeModal" class="modal-btn cancel-btn">
+            Cancel
+          </button>
         </div>
       </div>
     </div>
@@ -132,29 +135,36 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import axios from 'axios'
 
 const route = useRoute()
-const authStore = useAuthStore()
 
-const tournament = ref({ rounds: [], players: [] })
+const tournament = ref([])
 const standings = ref([])
-const activeTab = ref('standings')
+const players = ref([])
+const activeAccordion = ref(null)
 const showResultModal = ref(false)
 const currentGame = ref(null)
 const resultInput = ref('')
 const playerEmail = ref('')
+const API_URL = import.meta.env.VITE_DJANGO_URL
+
 
 const fetchTournamentData = async () => {
   try {
-    const [tournamentRes, standingsRes] = await Promise.all([
-      axios.get(`/api/tournaments/${route.params.tournament_id}/`),
-      axios.get(`/api/tournaments/${route.params.tournament_id}/standings/`)
-    ])
-    
-    tournament.value = tournamentRes.data
-    standings.value = standingsRes.data
+    const tournamentId = route.params.tournament_id
+    const response = await fetch(API_URL + `tournaments/${tournamentId}/`, {
+      headers: {
+        'Accept': 'application/json',
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    tournament.value = await response.json()
+
+    const players = tournament.value.players
   } catch (error) {
     console.error('Error fetching tournament data:', error)
   }
@@ -162,6 +172,10 @@ const fetchTournamentData = async () => {
 
 const refreshData = () => {
   fetchTournamentData()
+}
+
+const toggleAccordion = (section) => {
+  activeAccordion.value = activeAccordion.value === section ? null : section
 }
 
 const openResultModal = (game) => {
@@ -194,18 +208,6 @@ const submitResult = async () => {
   }
 }
 
-const updateGameResult = async (game) => {
-  try {
-    await axios.patch(`/api/games/${game.id}/`, {
-      result: game.result
-    })
-    refreshData()
-  } catch (error) {
-    console.error('Error updating game result:', error)
-    alert(error.response?.data?.message || 'Error updating result')
-  }
-}
-
 onMounted(() => {
   fetchTournamentData()
 })
@@ -213,49 +215,148 @@ onMounted(() => {
 
 <style scoped>
 .tournament-detail {
-  max-width: 1200px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 20px;
+  font-family: Arial, sans-serif;
 }
 
-.tabs {
-  display: flex;
-  gap: 10px;
+h1 {
+  font-size: 1.8rem;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+h1 em {
+  font-style: italic;
+  color: #007bff;
+}
+
+.refresh-btn {
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 15px;
+  font-size: 0.9rem;
+}
+
+.refresh-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.instructions {
+  color: #666;
+  margin-bottom: 20px;
+  font-size: 0.95rem;
+}
+
+.divider {
+  border: 0;
+  height: 1px;
+  background-color: #eee;
   margin: 20px 0;
 }
 
-.tabs button {
-  padding: 8px 16px;
-  background: none;
+/* Accordion Styles */
+.accordion-container {
+  margin-top: 20px;
+}
+
+.accordion-item {
   border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background-color: #f8f9fa;
   cursor: pointer;
+  user-select: none;
 }
 
-.tabs button.active {
-  background-color: #007bff;
-  color: white;
+.accordion-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #333;
 }
 
-table {
+.accordion-icon {
+  font-size: 1.3rem;
+  font-weight: bold;
+}
+
+.accordion-content {
+  padding: 15px 20px;
+  background-color: white;
+}
+
+/* Table Styles */
+.standings-table, .pairings-table {
   width: 100%;
   border-collapse: collapse;
-  margin: 15px 0;
+  margin: 10px 0;
+  font-size: 0.9rem;
 }
 
-th, td {
-  border: 1px solid #ddd;
-  padding: 8px;
+.standings-table th, 
+.pairings-table th {
+  background-color: #f8f9fa;
+  padding: 10px;
   text-align: left;
+  border-bottom: 2px solid #ddd;
 }
 
-th {
-  background-color: #f2f2f2;
+.standings-table td, 
+.pairings-table td {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
 }
 
-.round {
-  margin-bottom: 30px;
+.standings-table tr:hover, 
+.pairings-table tr:hover {
+  background-color: #f5f5f5;
 }
 
+/* Round Section */
+.round-section {
+  margin-bottom: 25px;
+}
+
+.round-section h3 {
+  font-size: 1rem;
+  color: #555;
+  margin: 15px 0 10px 0;
+  font-family: monospace;
+}
+
+/* Result Button */
+.result-btn {
+  background: none;
+  border: none;
+  color: #28a745;
+  cursor: pointer;
+  padding: 2px 5px;
+  font-size: 0.9rem;
+}
+
+.result-btn:hover {
+  text-decoration: underline;
+}
+
+.board-type-indicator {
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+/* Modal Styles */
 .modal {
   position: fixed;
   top: 0;
@@ -271,17 +372,15 @@ th {
 
 .modal-content {
   background-color: white;
-  padding: 20px;
+  padding: 25px;
   border-radius: 5px;
-  width: 400px;
-  max-width: 90%;
+  width: 450px;
+  max-width: 95%;
 }
 
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
+.modal-content h3 {
+  margin-top: 0;
+  color: #333;
 }
 
 .form-group {
@@ -291,11 +390,61 @@ th {
 .form-group label {
   display: block;
   margin-bottom: 5px;
+  font-weight: 500;
 }
 
-.form-group input, .form-group select {
+.form-select, .form-input {
   width: 100%;
-  padding: 8px;
-  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.modal-btn {
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.submit-btn {
+  background-color: #28a745;
+  color: white;
+  border: none;
+}
+
+.submit-btn:hover {
+  background-color: #218838;
+}
+
+.cancel-btn {
+  background-color: #f8f9fa;
+  border: 1px solid #ddd;
+}
+
+.cancel-btn:hover {
+  background-color: #e2e6ea;
+}
+
+/* Animations */
+.slide-enter-active,
+.slide-leave-active {
+  transition: all 0.3s ease;
+  max-height: 1000px;
+}
+
+.slide-enter-from,
+.slide-leave-to {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
 }
 </style>

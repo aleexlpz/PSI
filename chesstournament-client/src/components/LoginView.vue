@@ -7,7 +7,7 @@
         <input 
           id="username" 
           v-model="username" 
-          type="text" 
+          type="text"
           required
           data-cy="username-input"
         >
@@ -36,6 +36,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 
+const API_URL = import.meta.env.VITE_DJANGO_URL
+
 const username = ref('')
 const password = ref('')
 const errorMessage = ref('')
@@ -43,16 +45,35 @@ const authStore = useAuthStore()
 const router = useRouter()
 
 const handleLogin = async () => {
+  errorMessage.value = ''
   try {
-    const response = await axios.post('/api/auth/login/', {
+    const response = await axios.post(API_URL + 'auth_token/login/', {
       username: username.value,
       password: password.value
+    }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
     })
     
-    authStore.login(response.data.token)
-    router.push('/')
+    if (response.data && response.data.token) {
+      authStore.login(response.data.token)
+      router.push('/')
+    } else {
+      errorMessage.value = 'Invalid response from server'
+    }
   } catch (error) {
-    errorMessage.value = 'Invalid username or password'
+    if (error.response) {
+      if (error.response.status === 401) {
+        errorMessage.value = 'Invalid username or password' + error.response.status
+      } else {
+        errorMessage.value = 'Server error' + username.value + password.value + '    ' + error.response.status
+      }
+    } else if (error.request) {
+      errorMessage.value = 'No response from server' + error.response.status
+    } else {
+      errorMessage.value = 'Request error occurred' + error.response.status
+    }
     console.error('Login error:', error)
   }
 }

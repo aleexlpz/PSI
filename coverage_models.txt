@@ -1,0 +1,23 @@
+Name                                                                         Stmts   Miss  Cover   Missing
+----------------------------------------------------------------------------------------------------------
+chess_models/__init__.py                                                         0      0   100%
+chess_models/admin.py                                                            1      0   100%
+chess_models/apps.py                                                             4      0   100%
+chess_models/constants.py                                                       41      0   100%
+chess_models/management/commands/constants.py                                    6      0   100%
+chess_models/management/commands/populate.py                                    94      6    94%   81-82, 134, 137-140
+chess_models/migrations/0001_initial.py                                          8      0   100%
+chess_models/migrations/0002_alter_tournamentplayers_registration_order.py       4      0   100%
+chess_models/migrations/__init__.py                                              0      0   100%
+chess_models/models.py                                                           0      0   100%
+chess_models/models/__init__.py                                                 88      3    97%   56, 62, 130
+chess_models/models/game.py                                                     71      6    92%   98, 107-109, 113, 119
+chess_models/models/other_models.py                                              0      0   100%
+chess_models/models/player.py                                                   71      1    99%   96
+chess_models/models/referee.py                                                   6      0   100%
+chess_models/models/round.py                                                     9      0   100%
+chess_models/models/tournament.py                                               72      5    93%   136, 139, 142, 145, 160
+chess_models/models/utils.py                                                     0      0   100%
+chess_models/views.py                                                            0      0   100%
+----------------------------------------------------------------------------------------------------------
+TOTAL                                                                          475     21    96%

@@ -1,30 +1,23 @@
-import { ref, computed } from "vue";
 import { defineStore } from "pinia";
-
-export const useCounterStore = defineStore("counter", () => {
-  const count = ref(0);
-  const doubleCount = computed(() => count.value * 2);
-  function increment() {
-    count.value++;
-  }
-
-  return { count, doubleCount, increment };
-});
-
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    token: null,
-    isAdmin: false
+    token: localStorage.getItem('token') || null, // Cargar token desde localStorage
+    isAdmin: false, // Puedes usar esta propiedad si necesitas roles
   }),
   actions: {
     login(token) {
-      this.token = token
-      // Guardar también en localStorage/sessionStorage
+      this.token = token;
+      this.isAdmin = true; // Configurar como administrador al iniciar sesión
+      localStorage.setItem('token', token); // Guardar token en localStorage
     },
     logout() {
-      this.token = null
-      // Limpiar storage
-    }
-  }
-})
+      this.token = null;
+      this.isAdmin = false; // Restablecer estado de administrador
+      localStorage.removeItem('token'); // Eliminar token de localStorage
+    },
+  },
+  getters: {
+    isAuthenticated: (state) => !!state.token, // Verificar si el usuario está autenticado
+  },
+});

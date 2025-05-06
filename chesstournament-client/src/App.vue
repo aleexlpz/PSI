@@ -13,6 +13,7 @@
     </nav>
     <main class="main-content">
       <router-view></router-view>
+      
     </main>
     <footer class="footer">
       © 2025 Copyright: Alejandro López & Ernesto Piñón
@@ -22,6 +23,7 @@
 
 <script setup>
 import { provide, ref, onMounted } from 'vue'
+
 
 const torneos = ref([])
 const isLoading = ref(false)
@@ -57,6 +59,8 @@ const listadoTorneos = async () => {
 onMounted(() => {
   listadoTorneos()
 })
+
+
 
 </script>
 
