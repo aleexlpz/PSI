@@ -1,15 +1,12 @@
 <template>
   <div class="chess-app">
-    <!-- Contenido principal -->
     <main class="main-content">
-      <!-- Texto de bienvenida -->
       <div class="welcome-section">
         <p>Welcome to the Chess Tournament Database. This database features the unique ability for players to update the results of their games. To create tournaments, an administrative account is required. However, any player can enter the result of a game.</p>
         <p>You can use the search button to find tournaments by name. For further information, please refer to the<router-link to="/faq" class="text-link"><u>FAQ</u></router-link>section.</p>
       </div>
 
       <section class="tournaments-and-search">
-        <!-- Listado de torneos -->
         <div class="tournaments-section">
           <h2>Tournaments</h2>
           <table class="tournaments-table">
@@ -20,17 +17,20 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="tournament in torneos" :key="tournament.id">
-                <td>{{ tournament.name }}</td>
+              <tr v-for="tournament in paginatedTorneos" :key="tournament.id">
+                <td>
+                  <router-link :to="`/tournament/${tournament.id}`" class="tournament-link">
+                    {{ tournament.name }}
+                  </router-link>
+                </td>
                 <td>{{ tournament.start_date }}</td>
               </tr>
             </tbody>
           </table>
 
-          <!-- Paginación -->
           <div class="pagination">
             <button 
-              @click="goToPage(currentPage - 1)"
+              @click="goToPage(currentPage - 1)" 
               :disabled="currentPage === 1"
               class="pagination-button"
             >
@@ -47,7 +47,6 @@
           </div>
         </div>
 
-        <!-- Barra de búsqueda -->
         <div class="search-section">
           <h3>Search</h3>
           <div class="search-box">
@@ -57,20 +56,76 @@
               placeholder="Search..."
               class="search-input"
             >
-            <button @click="searchTournaments" class="search-button">Search</button>
+            <button class="search-button">Search</button>
+          </div>
+          <div class="search-results" v-if="searchQuery && searchResults.length > 0">
+            <table class="tournaments-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="tournament in searchResults" :key="tournament.id">
+                  <td>
+                    <router-link :to="`/tournament/${tournament.id}`" class="tournament-link">
+                      {{ tournament.name }}
+                    </router-link>
+                  </td>
+                  <td>{{ tournament.start_date }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else-if="searchQuery && searchResults.length === 0">
+            <p>No tournaments found matching "{{ searchQuery }}"</p>
           </div>
         </div>
       </section>
-    </main>
 
-    <!-- Pie de página -->
+    </main>
   </div>
 </template>
 
 <script setup>
+import { computed, ref, inject } from 'vue'
 
-  import { inject } from 'vue'
-  const torneos = inject('torneos')
+const torneos = inject('torneos') || ref([])
+const searchQuery = ref('')
+const currentPage = ref(1)
+const itemsPerPage = 5
+
+// Torneos filtrados para la lista paginada
+const filteredTorneos = computed(() => {
+  return torneos.value
+})
+
+// Resultados del buscador (sin paginación)
+const searchResults = computed(() => {
+  return torneos.value.filter(tournament =>
+    tournament.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+  )
+})
+
+// Paginación
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredTorneos.value.length / itemsPerPage)))
+
+const paginatedTorneos = computed(() => {
+  const startIndex = (currentPage.value - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  return filteredTorneos.value.slice(startIndex, endIndex)
+})
+
+const goToPage = (page) => {
+  if (page < 1) {
+    currentPage.value = 1
+  } else if (page > totalPages.value) {
+    currentPage.value = totalPages.value
+  } else {
+    currentPage.value = page
+  }
+}
 </script>
 
 <style scoped>
@@ -186,6 +241,29 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start; /* Alinea el contenido al inicio horizontalmente */
+}
+
+.search-results {
+  margin-top: 2rem;
+}
+
+.search-results-list {
+  list-style: none;
+  padding: 0;
+}
+
+.search-results-list li {
+  margin-bottom: 0.5rem;
+}
+
+.tournament-link {
+  color: #3498db;
+  text-decoration: none;
+}
+
+.tournament-link:hover {
+  text-decoration: underline;
+  color: #2c0083;
 }
 
 
