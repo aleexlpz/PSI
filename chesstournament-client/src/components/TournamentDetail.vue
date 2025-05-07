@@ -25,26 +25,26 @@
                 <tr>
                   <th>Rank</th>
                   <th>Name</th>
-                  <th>Wins</th>
+                  <th v-if="selectedColumns.includes('WI')">Wins</th>
                   <th>Score</th>
-                  <th>No. games played with Black</th>
-                  <th>BU</th>
-                  <th>BC</th>
-                  <th>BA</th>
-                  <th>SB</th>
+                  <th v-if="selectedColumns.includes('BT')">Black</th>
+                  <th v-if="selectedColumns.includes('BU')">BU</th>
+                  <th v-if="selectedColumns.includes('BC')">BC</th>
+                  <th v-if="selectedColumns.includes('BA')">BA</th>
+                  <th v-if="selectedColumns.includes('SB')">SB</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="player in rankings" :key="player.rank">
                   <td>{{ player.rank }}</td>
                   <td>{{ player.name }}</td>
-                  <td>{{ player.wins }}</td>
-                  <td>{{ player.score }}</td>
-                  <td>{{ player.blackGames }}</td>
-                  <td>{{ player.buchholz }}</td>
-                  <td>{{ player.buchholzCut1 }}</td>
-                  <td>{{ player.buchholzAverage }}</td>
-                  <td>{{ player.sonnebornBerger }}</td>
+                  <td v-if="selectedColumns.includes('WI')">{{ player.wins }}</td>
+                  <td>{{ player.score.toFixed(2) }}</td>
+                  <td v-if="selectedColumns.includes('BT')">{{ player.blackGames }}</td>
+                  <td v-if="selectedColumns.includes('BU')">{{ player.buchholz.toFixed(2) }}</td>
+                  <td v-if="selectedColumns.includes('BC')">{{ player.buchholzCut1.toFixed(2) }}</td>
+                  <td v-if="selectedColumns.includes('BA')">{{ player.buchholzAverage.toFixed(2) }}</td>
+                  <td v-if="selectedColumns.includes('SB')">{{ player.sonnebornBerger.toFixed(2) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -67,7 +67,7 @@
 
           <!-- Instrucciones -->
           <p class="instructions">
-            Press <span class="result-btn">✅</span> to update the game result. See the FAQ for more information.
+            Press <span class="result-btn">✅</span> to update the game result. See the <router-link to="/faq" class="text-link"><u>FAQ</u></router-link> for more information.
           </p>
 
           <!-- Rondas -->
@@ -164,7 +164,6 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 const tournament = ref([])
-const standings = ref([])
 const rankings = ref([])
 const activeAccordion = ref(null)
 const showResultModal = ref(false)
@@ -173,6 +172,7 @@ const resultInput = ref('')
 const playerEmail = ref('')
 const API_URL = import.meta.env.VITE_DJANGO_URL
 const tournamentId = route.params.tournament_id
+const selectedColumns = ref([]);
 
 const fetchRankings = async () => {
   try {
@@ -208,57 +208,147 @@ const fetchRoundResults = async () => {
 
     const rounds = await response.json();
 
-    // Contar partidas jugadas con negras y victorias
+    // Contadores para las métricas
+    const playerScores = {}; // Almacena los puntajes acumulados de cada jugador
     const blackGamesCount = {};
     const winsCount = {};
     const buchholz = {}; // Buchholz
-    const buchholzCut1 = {}; // Buchholz cut 1
-    const buchholzAverage = {}; // Buchholz average
+    const buchholzCut1 = {}; // Buchholz Cut 1
+    const buchholzAverage = {}; // Buchholz Average
     const sonnebornBerger = {}; // Sonneborn-Berger
 
+    // Valores dinámicos del torneo
+    const winPoints = tournament.value.win_points || 1.0;
+    const drawPoints = tournament.value.draw_points || 0.5;
+    const losePoints = tournament.value.lose_points || 0.0;
+
+    // Procesar cada ronda y partida
     rounds.forEach(round => {
       round.games.forEach(game => {
-        // Contar partidas jugadas con negras
-        if (game.black_player) {
-          blackGamesCount[game.black_player] = (blackGamesCount[game.black_player] || 0) + 1;
-        }
-
-        // Contar victorias
-        if (game.result === 'w') {
-          winsCount[game.white_player] = (winsCount[game.white_player] || 0) + 1;
-        } else if (game.result === 'b') {
-          winsCount[game.black_player] = (winsCount[game.black_player] || 0) + 1;
-        }
-
-        // Calcular Buchholz y Sonneborn-Berger
         const whitePlayer = game.white_player;
         const blackPlayer = game.black_player;
 
-        if (game.result) {
-          const whiteScore = game.result === 'w' ? 1 : game.result === '½' ? 0.5 : 0;
-          const blackScore = game.result === 'b' ? 1 : game.result === '½' ? 0.5 : 0;
+        // Inicializar contadores si no existen
+        if (!playerScores[whitePlayer]) playerScores[whitePlayer] = 0;
+        if (!playerScores[blackPlayer]) playerScores[blackPlayer] = 0;
+        if (!blackGamesCount[blackPlayer]) blackGamesCount[blackPlayer] = 0;
+        if (!winsCount[whitePlayer]) winsCount[whitePlayer] = 0;
+        if (!winsCount[blackPlayer]) winsCount[blackPlayer] = 0;
 
-          // Buchholz: suma de los puntajes de los oponentes
-          buchholz[whitePlayer] = (buchholz[whitePlayer] || 0) + (game.black_score || 0);
-          buchholz[blackPlayer] = (buchholz[blackPlayer] || 0) + (game.white_score || 0);
+        // Contar partidas jugadas con negras
+        if (blackPlayer) blackGamesCount[blackPlayer] += 1;
 
-          // Sonneborn-Berger: suma de los puntajes de los oponentes multiplicados por el resultado
-          sonnebornBerger[whitePlayer] = (sonnebornBerger[whitePlayer] || 0) + (game.black_score || 0) * whiteScore;
-          sonnebornBerger[blackPlayer] = (sonnebornBerger[blackPlayer] || 0) + (game.white_score || 0) * blackScore;
+        // Determinar puntajes según el resultado
+        let whiteScore = 0;
+        let blackScore = 0;
+
+        switch (game.result) {
+          case 'w': // White wins
+            whiteScore = winPoints;
+            blackScore = losePoints;
+            winsCount[whitePlayer] += 1;
+            break;
+          case 'b': // Black wins
+            whiteScore = losePoints;
+            blackScore = winPoints;
+            winsCount[blackPlayer] += 1;
+            break;
+          case '=': // Draw
+            whiteScore = drawPoints;
+            blackScore = drawPoints;
+            break;
+          case 'H': // Bye
+            whiteScore = winPoints;
+            break;
+          case '+': // Forfeit win
+            whiteScore = winPoints;
+            break;
+          case '-': // Forfeit loss
+            blackScore = winPoints;
+            break;
+          case 'U': // Unplayed
+          default:
+            break;
         }
+
+        // Acumular puntajes de los jugadores
+        playerScores[whitePlayer] += whiteScore;
+        playerScores[blackPlayer] += blackScore;
       });
     });
 
-    // Calcular Buchholz cut 1 y Buchholz average
-    Object.keys(buchholz).forEach(player => {
-      const scores = rounds
-        .flatMap(round => round.games)
-        .filter(game => game.white_player === player || game.black_player === player)
-        .map(game => game.white_player === player ? game.black_score : game.white_score)
-        .sort((a, b) => a - b);
+    // Calcular Buchholz manualmente
+    Object.keys(playerScores).forEach(player => {
+      const opponentScores = [];
 
-      buchholzCut1[player] = scores.slice(1, -1).reduce((sum, score) => sum + score, 0); // Excluye el más alto y el más bajo
-      buchholzAverage[player] = scores.length > 0 ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
+      rounds.forEach(round => {
+        round.games.forEach(game => {
+          if (game.white_player === player && game.black_player) {
+            opponentScores.push(playerScores[game.black_player]);
+          } else if (game.black_player === player && game.white_player) {
+            opponentScores.push(playerScores[game.white_player]);
+          }
+        });
+      });
+
+      // Ordenar los puntajes de los oponentes
+      opponentScores.sort((a, b) => a - b);
+
+      // Calcular Buchholz (BU)
+      buchholz[player] = opponentScores.reduce((sum, score) => sum + score, 0);
+
+      // Calcular Buchholz Cut 1 (BC)
+      // Calcular Buchholz Cut 1 (BC)
+      if (opponentScores.length > 1) {
+        // Excluir solo el puntaje más bajo
+        buchholzCut1[player] = opponentScores
+          .slice(1) // Excluir el primer elemento (el más bajo, ya que está ordenado)
+          .reduce((sum, score) => sum + score, 0);
+      } else {
+        buchholzCut1[player] = 0; // No se puede calcular si hay menos de 2 oponentes
+      }
+
+      // Calcular Buchholz Average (BA)
+      buchholzAverage[player] =
+        opponentScores.length > 0
+          ? opponentScores.reduce((sum, score) => sum + score, 0) /
+            opponentScores.length
+          : 0;
+    });
+
+    // Calcular Sonneborn-Berger manualmente
+    rounds.forEach(round => {
+      round.games.forEach(game => {
+        const whitePlayer = game.white_player;
+        const blackPlayer = game.black_player;
+
+        let whiteScore = 0;
+        let blackScore = 0;
+
+        switch (game.result) {
+          case 'w': // White wins
+            whiteScore = winPoints;
+            blackScore = losePoints;
+            break;
+          case 'b': // Black wins
+            whiteScore = losePoints;
+            blackScore = winPoints;
+            break;
+          case '=': // Draw
+            whiteScore = drawPoints;
+            blackScore = drawPoints;
+            break;
+          default:
+            break;
+        }
+
+        if (blackPlayer) {
+          sonnebornBerger[whitePlayer] =
+            (sonnebornBerger[whitePlayer] || 0) + playerScores[blackPlayer] * whiteScore;
+          sonnebornBerger[blackPlayer] =
+            (sonnebornBerger[blackPlayer] || 0) + playerScores[whitePlayer] * blackScore;
+        }
+      });
     });
 
     // Agregar el conteo a los rankings
@@ -269,7 +359,7 @@ const fetchRoundResults = async () => {
       buchholz: buchholz[player.name] || 0,
       buchholzCut1: buchholzCut1[player.name] || 0,
       buchholzAverage: buchholzAverage[player.name] || 0,
-      sonnebornBerger: sonnebornBerger[player.name] || 0,
+      sonnebornBerger: sonnebornBerger[player.name] || 0, // Agregar SB al ranking
     }));
   } catch (error) {
     console.error('Error fetching round results:', error);
@@ -309,7 +399,12 @@ const fetchTournamentData = async () => {
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    tournament.value = await response.json();
+
+    const data = await response.json();
+    tournament.value = data;
+
+    // Guardar las columnas seleccionadas en selectedColumns
+    selectedColumns.value = data.rankingList || []; // Si no hay rankingList, usa un array vacío
   } catch (error) {
     console.error('Error fetching tournament data:', error);
   }
