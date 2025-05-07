@@ -31,12 +31,12 @@
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>{{ tournament.name }}</td>
-                  <td>{{ tournament.name }}</td>
-                  <td>{{ tournament.name }}</td>
-                  <td>{{ tournament.name }}</td>
-                  <td>{{ tournament.name }}</td>
+                <tr v-for="player in rankings" :key="player.rank">
+                  <td>{{ player.rank }}</td>
+                  <td>{{ player.name }}</td>
+                  <td>{{ player.score }}</td>
+                  <td>{{ player.name }}</td>
+                  <td>{{ player.name }}</td>
                 </tr>
               </tbody>
             </table>
@@ -135,24 +135,48 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+
 import axios from 'axios'
 
 const route = useRoute()
 
 const tournament = ref([])
 const standings = ref([])
-const players = ref([])
+const rankings = ref([])
 const activeAccordion = ref(null)
 const showResultModal = ref(false)
 const currentGame = ref(null)
 const resultInput = ref('')
 const playerEmail = ref('')
 const API_URL = import.meta.env.VITE_DJANGO_URL
+const tournamentId = route.params.tournament_id
 
+const fetchRankings = async () => {
+  try {
+    const response = await fetch(API_URL + `get_ranking/${tournamentId}/`, {
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Raw data from API:', data);
+
+    // Convierte el objeto en un array y ordénalo por rank
+    rankings.value = Object.values(data).sort((a, b) => a.rank - b.rank);
+    console.log('Parsed and sorted rankings:', rankings.value);
+  } catch (error) {
+    console.error('Error fetching players:', error);
+    rankings.value = []; // Asegura que rankings no sea undefined en caso de error
+  }
+};
 
 const fetchTournamentData = async () => {
   try {
-    const tournamentId = route.params.tournament_id
     const response = await fetch(API_URL + `tournaments/${tournamentId}/`, {
       headers: {
         'Accept': 'application/json',
@@ -164,7 +188,6 @@ const fetchTournamentData = async () => {
     }
     tournament.value = await response.json()
 
-    const players = tournament.value.players
   } catch (error) {
     console.error('Error fetching tournament data:', error)
   }
@@ -172,6 +195,7 @@ const fetchTournamentData = async () => {
 
 const refreshData = () => {
   fetchTournamentData()
+  fetchRankings()
 }
 
 const toggleAccordion = (section) => {
@@ -210,6 +234,7 @@ const submitResult = async () => {
 
 onMounted(() => {
   fetchTournamentData()
+  fetchRankings()
 })
 </script>
 

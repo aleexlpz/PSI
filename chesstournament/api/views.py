@@ -130,7 +130,7 @@ class GetRanking(APIView):
         for player, data in ranking.items():
             player_data = {
                 'id': player.id,
-                'name': player.lichess_username if player.lichess_username else player.name,
+                'name': player.name,
                 'score': data.get('PS', 0),
                 'rank': data.get('rank', 0),
             }
@@ -175,8 +175,43 @@ class GetPlayers(APIView):
             
         return Response(response_data, status=status.HTTP_200_OK)
     
+from rest_framework.exceptions import NotFound
+
 class GetRoundResults(APIView):
     permission_classes = []
+
+    def get(self, request, tournament_id):
+        try:
+            tournament = Tournament.objects.get(id=tournament_id)
+        except Tournament.DoesNotExist:
+            raise NotFound(detail="Tournament does not exist", code=404)
+
+        # Ordena por un campo válido
+        rounds = tournament.round_set.all().order_by('start_date')  # Cambia 'start_date' por el campo correcto
+        response_data = []
+
+        for round in rounds:
+            round_data = {
+                'id': round.id,
+                'name': round.name,
+                'games': []
+            }
+
+            games = round.game_set.all()
+            for game in games:
+                game_data = {
+                    'id': game.id,
+                    'white_player': game.white.name if game.white else None,
+                    'black_player': game.black.name if game.black else None,
+                    'result': game.result,
+                    'finished': game.finished
+                }
+                round_data['games'].append(game_data)
+
+            response_data.append(round_data)
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
 
 class UpdateLichessGameAPIView(APIView):
     permission_classes = []
