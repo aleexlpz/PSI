@@ -25,18 +25,26 @@
                 <tr>
                   <th>Rank</th>
                   <th>Name</th>
+                  <th>Wins</th>
                   <th>Score</th>
-                  <th>Buchholz</th>
                   <th>No. games played with Black</th>
+                  <th>BU</th>
+                  <th>BC</th>
+                  <th>BA</th>
+                  <th>SB</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="player in rankings" :key="player.rank">
                   <td>{{ player.rank }}</td>
                   <td>{{ player.name }}</td>
+                  <td>{{ player.wins }}</td>
                   <td>{{ player.score }}</td>
-                  <td>{{ player.name }}</td>
-                  <td>{{ player.name }}</td>
+                  <td>{{ player.blackGames }}</td>
+                  <td>{{ player.buchholz }}</td>
+                  <td>{{ player.buchholzCut1 }}</td>
+                  <td>{{ player.buchholzAverage }}</td>
+                  <td>{{ player.sonnebornBerger }}</td>
                 </tr>
               </tbody>
             </table>
@@ -46,50 +54,63 @@
 
       <!-- Pairings/Results Accordion -->
       <div class="accordion-item" :class="{ active: activeAccordion === 'pairings' }">
-        <div class="accordion-header" @click="toggleAccordion('pairings')">
-          <h2>Pairings/Results</h2>
-          <span class="accordion-icon">{{ activeAccordion === 'pairings' ? '−' : '+' }}</span>
-        </div>
-        <transition name="slide">
-          <div class="accordion-content" v-show="activeAccordion === 'pairings'">
-            <div class="board-type-indicator">
-              {{ tournament.board_type === 'LIC' ? 'LICHESS' : 'OTB' }}
-            </div>
-            
-            <p class="instructions">
-              The abbreviations used in the "result" column are explained at the end of the page.<br>
-              Press <span class="result-btn">✅</span> to update the game result. See the FAQ for more information.
-            </p>
-
-            <div v-for="round in tournament.rounds" :key="round.number" class="round-section">
-              <h3>round_{{ String(round.number).padStart(3, '0') }}</h3>
-              <table class="pairings-table">
-                <thead>
-                  <tr>
-                    <th>Table</th>
-                    <th>White</th>
-                    <th>Result</th>
-                    <th>Black</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="game in round.games" :key="game.id">
-                    <td>{{ game.table_number || '-' }}</td>
-                    <td>{{ game.white_player.name }}</td>
-                    <td>
-                      <span v-if="game.result">{{ game.result }}</span>
-                      <button v-else @click="openResultModal(game)" class="result-btn">
-                        choose result
-                      </button>
-                    </td>
-                    <td>{{ game.black_player.name }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </transition>
+      <div class="accordion-header" @click="toggleAccordion('pairings')">
+        <h2>Pairings/Results</h2>
+        <span class="accordion-icon">{{ activeAccordion === 'pairings' ? '−' : '+' }}</span>
       </div>
+      <transition name="slide">
+        <div class="accordion-content" v-show="activeAccordion === 'pairings'">
+          <!-- Tipo de torneo -->
+          <div class="board-type-indicator">
+            {{ tournament.board_type === 'LIC' ? 'LICHESS' : 'OTB' }}
+          </div>
+
+          <!-- Instrucciones -->
+          <p class="instructions">
+            Press <span class="result-btn">✅</span> to update the game result. See the FAQ for more information.
+          </p>
+
+          <!-- Rondas -->
+          <div v-for="round in tournament.rounds" :key="round.id" class="round-section">
+            <h3>{{ round.name }}</h3>
+            <table class="pairings-table">
+              <thead>
+                <tr>
+                  <th>Table</th>
+                  <th>White</th>
+                  <th>Result</th>
+                  <th>Black</th>
+                  <th v-if="authStore.isAuthenticated">Choose Result</th> <!-- Nueva columna combinada -->
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(game, index) in round.games" :key="game.id">
+                  <td>{{ index + 1 }}</td>
+                  <td>{{ game.white_player }}</td>
+                  <td>{{ game.result || 'type gameID' }}</td> <!-- Muestra el resultado o un marcador de posición -->
+                  <td>{{ game.black_player }}</td>
+                  <td v-if="authStore.isAuthenticated"> <!-- Columna combinada -->
+                    <div class="choose-result">
+                      <select
+                        v-model="game.result"
+                        class="result-select"
+                      >
+                        <option value="" disabled>choose result</option>
+                        <option value="1-0">White wins (1-0)</option>
+                        <option value="0-1">Black wins (0-1)</option>
+                        <option value="½-½">Draw (½-½)</option>
+                        <option value="">Unknown result</option>
+                      </select>
+                      <button @click="submitGameResult(game)" class="result-btn">✅</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </transition>
+    </div>
     </div>
 
     <!-- Result Modal -->
@@ -133,12 +154,14 @@
 </template>
 
 <script setup>
+
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-
 import axios from 'axios'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const authStore = useAuthStore()
 
 const tournament = ref([])
 const standings = ref([])
@@ -164,15 +187,115 @@ const fetchRankings = async () => {
     }
 
     const data = await response.json();
-    console.log('Raw data from API:', data);
-
-    // Convierte el objeto en un array y ordénalo por rank
     rankings.value = Object.values(data).sort((a, b) => a.rank - b.rank);
-    console.log('Parsed and sorted rankings:', rankings.value);
   } catch (error) {
     console.error('Error fetching players:', error);
-    rankings.value = []; // Asegura que rankings no sea undefined en caso de error
+    rankings.value = [];
   }
+};
+
+const fetchRoundResults = async () => {
+  try {
+    const response = await fetch(API_URL + `get_round_results/${tournamentId}/`, {
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const rounds = await response.json();
+
+    // Contar partidas jugadas con negras y victorias
+    const blackGamesCount = {};
+    const winsCount = {};
+    const buchholz = {}; // Buchholz
+    const buchholzCut1 = {}; // Buchholz cut 1
+    const buchholzAverage = {}; // Buchholz average
+    const sonnebornBerger = {}; // Sonneborn-Berger
+
+    rounds.forEach(round => {
+      round.games.forEach(game => {
+        // Contar partidas jugadas con negras
+        if (game.black_player) {
+          blackGamesCount[game.black_player] = (blackGamesCount[game.black_player] || 0) + 1;
+        }
+
+        // Contar victorias
+        if (game.result === 'w') {
+          winsCount[game.white_player] = (winsCount[game.white_player] || 0) + 1;
+        } else if (game.result === 'b') {
+          winsCount[game.black_player] = (winsCount[game.black_player] || 0) + 1;
+        }
+
+        // Calcular Buchholz y Sonneborn-Berger
+        const whitePlayer = game.white_player;
+        const blackPlayer = game.black_player;
+
+        if (game.result) {
+          const whiteScore = game.result === 'w' ? 1 : game.result === '½' ? 0.5 : 0;
+          const blackScore = game.result === 'b' ? 1 : game.result === '½' ? 0.5 : 0;
+
+          // Buchholz: suma de los puntajes de los oponentes
+          buchholz[whitePlayer] = (buchholz[whitePlayer] || 0) + (game.black_score || 0);
+          buchholz[blackPlayer] = (buchholz[blackPlayer] || 0) + (game.white_score || 0);
+
+          // Sonneborn-Berger: suma de los puntajes de los oponentes multiplicados por el resultado
+          sonnebornBerger[whitePlayer] = (sonnebornBerger[whitePlayer] || 0) + (game.black_score || 0) * whiteScore;
+          sonnebornBerger[blackPlayer] = (sonnebornBerger[blackPlayer] || 0) + (game.white_score || 0) * blackScore;
+        }
+      });
+    });
+
+    // Calcular Buchholz cut 1 y Buchholz average
+    Object.keys(buchholz).forEach(player => {
+      const scores = rounds
+        .flatMap(round => round.games)
+        .filter(game => game.white_player === player || game.black_player === player)
+        .map(game => game.white_player === player ? game.black_score : game.white_score)
+        .sort((a, b) => a - b);
+
+      buchholzCut1[player] = scores.slice(1, -1).reduce((sum, score) => sum + score, 0); // Excluye el más alto y el más bajo
+      buchholzAverage[player] = scores.length > 0 ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
+    });
+
+    // Agregar el conteo a los rankings
+    rankings.value = rankings.value.map(player => ({
+      ...player,
+      blackGames: blackGamesCount[player.name] || 0,
+      wins: winsCount[player.name] || 0,
+      buchholz: buchholz[player.name] || 0,
+      buchholzCut1: buchholzCut1[player.name] || 0,
+      buchholzAverage: buchholzAverage[player.name] || 0,
+      sonnebornBerger: sonnebornBerger[player.name] || 0,
+    }));
+  } catch (error) {
+    console.error('Error fetching round results:', error);
+  }
+};
+
+const submitGameResult = async (game) => {
+  try {
+    const response = await axios.post(`${API_URL}submit_game_result/`, {
+      game_id: game.id,
+      result: game.result,
+    });
+
+    if (response.status === 200) {
+      alert('Result submitted successfully!');
+    } else {
+      alert('Failed to submit result.');
+    }
+  } catch (error) {
+    console.error('Error submitting game result:', error);
+    alert('An error occurred while submitting the result.');
+  }
+};
+
+const toggleAccordion = (accordionName) => {
+  activeAccordion.value = activeAccordion.value === accordionName ? null : accordionName;
 };
 
 const fetchTournamentData = async () => {
@@ -181,61 +304,55 @@ const fetchTournamentData = async () => {
       headers: {
         'Accept': 'application/json',
       }
-    })
+    });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-    tournament.value = await response.json()
-
+    tournament.value = await response.json();
   } catch (error) {
-    console.error('Error fetching tournament data:', error)
+    console.error('Error fetching tournament data:', error);
   }
-}
+};
+
+const fetchGamesByRounds = async () => {
+  try {
+    const response = await fetch(`${API_URL}get_round_results/${tournamentId}/`, {
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const rounds = await response.json();
+    console.log('Fetched games by rounds:', rounds); // Depuración: verifica los datos obtenidos
+
+    // Actualiza las rondas en el estado del torneo
+    tournament.value.rounds = rounds.map((round, index) => ({
+      number: index + 1, // Asigna un número de ronda basado en el índice
+      ...round
+    }));
+  } catch (error) {
+    console.error('Error fetching games by rounds:', error);
+  }
+};
 
 const refreshData = () => {
-  fetchTournamentData()
-  fetchRankings()
-}
-
-const toggleAccordion = (section) => {
-  activeAccordion.value = activeAccordion.value === section ? null : section
-}
-
-const openResultModal = (game) => {
-  currentGame.value = game
-  resultInput.value = ''
-  playerEmail.value = ''
-  showResultModal.value = true
-}
-
-const closeModal = () => {
-  showResultModal.value = false
-}
-
-const submitResult = async () => {
-  try {
-    const payload = {
-      result: resultInput.value
-    }
-    
-    if (tournament.value.board_type === 'OTB') {
-      payload.email = playerEmail.value
-    }
-
-    await axios.patch(`/api/games/${currentGame.value.id}/`, payload)
-    closeModal()
-    refreshData()
-  } catch (error) {
-    console.error('Error submitting result:', error)
-    alert(error.response?.data?.message || 'Error submitting result')
-  }
-}
+  fetchTournamentData();
+  fetchRankings();
+  fetchRoundResults();
+  fetchGamesByRounds();
+};
 
 onMounted(() => {
-  fetchTournamentData()
-  fetchRankings()
-})
+  fetchTournamentData();
+  fetchRankings();
+  fetchRoundResults();
+  fetchGamesByRounds();
+});
 </script>
 
 <style scoped>
@@ -254,7 +371,7 @@ h1 {
 
 h1 em {
   font-style: italic;
-  color: #007bff;
+  color: #aa8406;
 }
 
 .refresh-btn {
@@ -471,5 +588,72 @@ h1 em {
   max-height: 0;
   opacity: 0;
   overflow: hidden;
+}
+
+.round-section {
+  margin-bottom: 25px;
+}
+
+.round-section h3 {
+  font-size: 1.2rem;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.pairings-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+}
+
+.pairings-table th,
+.pairings-table td {
+  padding: 10px;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+.pairings-table th {
+  background-color: #f8f9fa;
+}
+
+.pairings-table tr:hover {
+  background-color: #f5f5f5;
+}
+
+.result-input {
+  width: 100px;
+  padding: 5px;
+  margin-right: 5px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+
+.result-btn {
+  background: none;
+  border: none;
+  color: #28a745;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.result-btn:hover {
+  text-decoration: underline;
+}
+
+.result-select {
+  width: 150px;
+  padding: 5px;
+  border: 1px solid #ffffff;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  margin-right: 5px;
+}
+.choose-result {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Espaciado entre el desplegable y el botón */
 }
 </style>
