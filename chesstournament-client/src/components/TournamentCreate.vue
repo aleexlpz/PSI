@@ -1,6 +1,5 @@
 <template>
   <div class="tournament-form">
-  <div class="tournament-form">
     <h1>Create a Tournament</h1>
 
     <div class="form-section">
@@ -106,14 +105,10 @@
     </div>
     <small class="error-message" v-if="errors.tournament">Sorry, not all fields are filled out correctly.</small>
     <button class="register-button" @click="submitForm">Register</button>
-    <small class="error-message" v-if="errors.tournament">Sorry, not all fields are filled out correctly.</small>
-    <button class="register-button" @click="submitForm">Register</button>
   </div>
 </template>
 
 <script>
-
-import { useAuthStore } from '@/stores/auth'
 
 const API_URL = import.meta.env.VITE_DJANGO_URL;
 export default {
@@ -283,7 +278,6 @@ export default {
 
 <style scoped>
 .tournament-form {
-.tournament-form {
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
@@ -309,6 +303,7 @@ label {
   display: block;
   margin-bottom: 5px;
   font-weight: bold;
+}
 .form-section {
   margin-bottom: 25px;
 }
@@ -319,8 +314,6 @@ label {
   font-weight: bold;
 }
 
-.form-input {
-  width: 100%;
 .form-input {
   width: 100%;
   padding: 8px;
@@ -365,7 +358,6 @@ label {
   max-width: 400px;
 }
 
-.points-row {
 .points-row {
   display: flex;
   flex-direction: column;
@@ -453,6 +445,7 @@ label {
 
 .register-button:hover {
   background-color: #0300a5;
+}
 .register-button:hover {
   background-color: #0300a5;
 }

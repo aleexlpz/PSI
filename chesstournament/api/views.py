@@ -111,7 +111,7 @@ class SearchTournamentsAPIView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 class TournamentCreateAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = []
     
     
 class GetRanking(APIView):
