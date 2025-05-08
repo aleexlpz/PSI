@@ -1,5 +1,6 @@
 <template>
   <div class="tournament-form">
+  <div class="tournament-form">
     <h1>Create a Tournament</h1>
 
     <div class="form-section">
@@ -103,6 +104,8 @@
       <small>Examples of CSV format are available in the <router-link to="/faq" class="text-link"><u>faq how can I add
             players to a tournament</u></router-link></small>
     </div>
+    <small class="error-message" v-if="errors.tournament">Sorry, not all fields are filled out correctly.</small>
+    <button class="register-button" @click="submitForm">Register</button>
     <small class="error-message" v-if="errors.tournament">Sorry, not all fields are filled out correctly.</small>
     <button class="register-button" @click="submitForm">Register</button>
   </div>
@@ -280,9 +283,16 @@ export default {
 
 <style scoped>
 .tournament-form {
+.tournament-form {
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+h1 {
+  font-size: 24px;
+  margin-bottom: 20px;
   font-family: Arial, sans-serif;
 }
 
@@ -299,11 +309,22 @@ label {
   display: block;
   margin-bottom: 5px;
   font-weight: bold;
+.form-section {
+  margin-bottom: 25px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
 }
 
 .form-input {
   width: 100%;
+.form-input {
+  width: 100%;
   padding: 8px;
+  border: 1px solid #ccc;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 16px;
@@ -341,8 +362,10 @@ label {
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   max-width: 400px;
+  max-width: 400px;
 }
 
+.points-row {
 .points-row {
   display: flex;
   flex-direction: column;
@@ -409,7 +432,16 @@ label {
 
 .register-button {
   background-color: #003de4;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-family: monospace;
+  margin-top: 10px;
+}
+
+.register-button {
+  background-color: #003de4;
   color: white;
+  padding: 12px 20px;
   padding: 12px 20px;
   border: none;
   border-radius: 4px;
@@ -419,6 +451,8 @@ label {
   margin-bottom: 40px;
 }
 
+.register-button:hover {
+  background-color: #0300a5;
 .register-button:hover {
   background-color: #0300a5;
 }
