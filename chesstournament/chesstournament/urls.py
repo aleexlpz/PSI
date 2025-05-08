@@ -15,15 +15,24 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.urls import path
-from rest_framework.authtoken.views import obtain_auth_token
+from rest_framework.authtoken.views import ObtainAuthToken
 from djoser.views import TokenDestroyView
 from django.contrib import admin
 from django.urls import include
+from django.http import JsonResponse
 
+
+
+class CustomObtainAuthToken(ObtainAuthToken):
+    def get(self, request, *args, **kwargs):
+        return JsonResponse(
+            {"detail": "Method 'GET' not allowed. Use POST to obtain a token."},
+            status=405
+        )
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/v1/auth_token/login/', obtain_auth_token, name='login'),
+    path('api/v1/auth_token/login/', CustomObtainAuthToken.as_view(), name='login'),
     path('api/v1/auth_token/logout/', TokenDestroyView.as_view(), name='logout'),
     path('api/v1/', include('djoser.urls')),
     path('api/v1/', include('djoser.urls.authtoken')), 
