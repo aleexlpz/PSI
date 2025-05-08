@@ -34,6 +34,7 @@ DEBUG = os.environ.get("DEBUG")
 ALLOWED_HOSTS = ['*']
 
 
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -49,7 +50,9 @@ INSTALLED_APPS = [
     'djoser',
     'api',
     'corsheaders',
+
 ]
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -67,6 +70,7 @@ DJOSER = {
     'SERIALIZERS': {
         'user': 'api.serializers.UserSerializer',
         'current_user': 'api.serializers.UserSerializer',
+        'token_create': 'djoser.serializers.TokenCreateSerializer',
     },
     'PERMISSIONS': {
         'user_create': ['rest_framework.permissions.IsAuthenticated'],

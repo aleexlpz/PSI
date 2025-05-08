@@ -47,20 +47,25 @@ const router = useRouter()
 const handleLogin = async () => {
   errorMessage.value = ''
   try {
-    const response = await axios.post(API_URL + 'auth_token/login/', {
+    const loginData = {
       username: username.value,
       password: password.value
-    }, {
+    }
+    console.log('Login data:', loginData) // Verifica el formato del cuerpo de la solicitud
+
+    const response = await axios.post(API_URL + 'token/login/', loginData, {
       headers: {
         'Content-Type': 'application/json'
       }
     })
+    console.log('Login response:', response.data.auth_token) // Verifica la respuesta del servidor
     
-    if (response.data && response.data.token) {
-      authStore.login(response.data.token)
+    if (response.data && response.data.auth_token) {
+      console.log('Auth token:', response.data.auth_token) // Verifica el token de autenticación
+      authStore.login(response.data.auth_token)
       router.push('/')
     } else {
-      errorMessage.value = 'Invalid response from server'
+      errorMessage.value = 'Invalid response from server, try it better'
     }
   } catch (error) {
     if (error.response) {
@@ -70,9 +75,9 @@ const handleLogin = async () => {
         errorMessage.value = 'Server error' + username.value + password.value + '    ' + error.response.status
       }
     } else if (error.request) {
-      errorMessage.value = 'No response from server' + error.response.status
+      errorMessage.value = 'No response from server'
     } else {
-      errorMessage.value = 'Request error occurred' + error.response.status
+      errorMessage.value = 'Request error occurred'
     }
     console.error('Login error:', error)
   }

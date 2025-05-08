@@ -110,6 +110,8 @@
 
 <script>
 
+
+
 const API_URL = import.meta.env.VITE_DJANGO_URL;
 export default {
   data() {
@@ -151,22 +153,20 @@ export default {
     transformTournamentData() {
       return {
         name: this.tournament.name,
-        start_date: "2025-04-08", // Puedes agregar un campo para la fecha en el formulario
-        end_date: "2025-04-08", // Igual que el campo anterior
-        max_update_time: 43200, // Puedes agregar este campo si es necesario
         only_administrative: this.tournament.onlyAdminCanUpdate,
-        tournament_type: this.tournament.pairingSystem,
-        tournament_speed: this.tournament.category,
-        board_type: this.tournament.boardType,
-        win_points: this.tournament.points.win,
-        draw_points: this.tournament.points.draw,
-        lose_points: this.tournament.points.lose,
-        timeControl: "15+0", // Puedes agregar este campo al formulario si es necesario
-        number_of_rounds_for_swiss: 0, // Puedes agregar este campo si aplica
-        administrativeUser: null, // Puedes agregar este campo si aplica
-        referee: null, // Puedes agregar este campo si aplica
-        players: this.tournament.playersCSV.split('\n').map((_, index) => index + 1), // Simula IDs de jugadores
-        rankingList: this.tournament.rankingMethods
+        tournament_type: this.tournament.pairingSystem === 'Single-round-robin' ? 'SR' :
+          this.tournament.pairingSystem === 'Double-round-robin' ? 'DR' :
+            this.tournament.pairingSystem === 'swiss' ? 'SW' : null,
+        tournament_speed: this.tournament.category === 'rapid' ? 'RA' :
+          this.tournament.category === 'classical' ? 'CL' :
+            this.tournament.category === 'blitz' ? 'BL' :
+              this.tournament.category === 'bullet' ? 'BU' : null, // Mapear a los valores esperados
+        board_type: this.tournament.boardType === 'lichess' ? 'LIC' :
+          this.tournament.boardType === 'otb' ? 'OTB' : null, // Mapear a los valores esperados
+        rankingList: this.selectedRankingMethods, // Lista vacía si no se selecciona nada
+        players: this.tournament.playersCSV
+          ? this.tournament.playersCSV.split('\n').map((_, index) => index + 1)
+          : [], // Lista vacía si no hay jugadores
       };
     },
     validatePlayersCSV() {
@@ -242,7 +242,7 @@ export default {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}` // Incluir el token en los encabezados
+              'Authorization': `Token ${token}`
             },
             body: JSON.stringify(tournamentData)
           });
@@ -252,7 +252,7 @@ export default {
             console.log('Tournament created successfully:', data);
 
             // Redirigir al detalle del torneo
-            this.$router.push(`/tournament/${data.id}`);
+            this.$router.push(`/tournamentdetail/${data.tournament_id}`);
           } else {
             console.error('Error creating tournament:', response.statusText);
           }
@@ -304,6 +304,7 @@ label {
   margin-bottom: 5px;
   font-weight: bold;
 }
+
 .form-section {
   margin-bottom: 25px;
 }
@@ -446,6 +447,7 @@ label {
 .register-button:hover {
   background-color: #0300a5;
 }
+
 .register-button:hover {
   background-color: #0300a5;
 }

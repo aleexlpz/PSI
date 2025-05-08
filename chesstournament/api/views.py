@@ -10,7 +10,7 @@ import requests
 from rest_framework.views import APIView
 from chess_models.models import getRanking
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import MethodNotAllowed
 
@@ -110,8 +110,28 @@ class SearchTournamentsAPIView(APIView):
         serializer = TournamentSerializer(tournaments, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
+
 class TournamentCreateAPIView(APIView):
-    permission_classes = []
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = TournamentSerializer(data=request.data)
+        if serializer.is_valid():
+            tournament = serializer.save(administrativeUser=request.user)
+            return Response(
+                {
+                    "result": True,
+                    "message": "Tournament created successfully",
+                    "tournament_id": tournament.id,  # Añade el ID explícitamente
+                },
+                status=status.HTTP_201_CREATED
+            )
+        else:
+            return Response(
+                {"result": False, "message": "Invalid data", "errors": serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
     
     
 class GetRanking(APIView):

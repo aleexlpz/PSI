@@ -23,7 +23,7 @@ urlpatterns = [
     path('', include(router.urls)),
     path('create_round/', CreateRoundAPIView.as_view()),
     path('searchTournaments/', SearchTournamentsAPIView.as_view()),
-    path('tournament_create/', TournamentCreateAPIView.as_view()),
+    path('tournament_create/', TournamentCreateAPIView.as_view(), name='tournament_create'),
     path('get_ranking/<int:tournament_id>/', GetRanking.as_view()),
     path('get_players/<int:tournament_id>/', GetPlayers.as_view()),
     path('get_round_results/<int:tournament_id>/', GetRoundResults.as_view()),
