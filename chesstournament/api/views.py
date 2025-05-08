@@ -307,18 +307,12 @@ class UpdateOTBGameAPIView(APIView):
         )
     
 class AdminUpdateGameAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = []
     
     def post(self, request):
         game_id = request.data.get('game_id')
         otb_result = request.data.get('otb_result')
         game = Game.objects.get(id=game_id)
-            
-        if game.round.tournament.administrativeUser != request.user:
-            return Response(
-                {"result": False, "message": "Only the user that create the tournament can update it"},
-                status=status.HTTP_403_FORBIDDEN
-            )
             
         game.result = otb_result
         game.finished = True
