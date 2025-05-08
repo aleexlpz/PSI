@@ -41,10 +41,10 @@
                   <td v-if="selectedColumns.includes('WI')">{{ player.wins }}</td>
                   <td>{{ player.score.toFixed(2) }}</td>
                   <td v-if="selectedColumns.includes('BT')">{{ player.blackGames }}</td>
-                  <td v-if="selectedColumns.includes('BU')">{{ player.buchholz.toFixed(2) }}</td>
-                  <td v-if="selectedColumns.includes('BC')">{{ player.buchholzCut1.toFixed(2) }}</td>
-                  <td v-if="selectedColumns.includes('BA')">{{ player.buchholzAverage.toFixed(2) }}</td>
-                  <td v-if="selectedColumns.includes('SB')">{{ player.sonnebornBerger.toFixed(2) }}</td>
+                  <td v-if="selectedColumns.includes('BU')">{{ player.buchholz !== undefined ? player.buchholz.toFixed(2) : '0.00' }}</td>
+                  <td v-if="selectedColumns.includes('BC')">{{ player.buchholzCut1 !== undefined ? player.buchholzCut1.toFixed(2) : '0.00' }}</td>
+                  <td v-if="selectedColumns.includes('BA')">{{ player.buchholzAverage !== undefined ? player.buchholzAverage.toFixed(2) : '0.00' }}</td>
+                  <td v-if="selectedColumns.includes('SB')">{{ player.sonnebornBerger !== undefined ? player.sonnebornBerger.toFixed(2) : '0.00' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -80,29 +80,60 @@
                   <th>White</th>
                   <th>Result</th>
                   <th>Black</th>
-                  <th v-if="authStore.isAuthenticated">Choose Result</th> <!-- Nueva columna combinada -->
+                  <th v-if="authStore.isAuthenticated">Choose Result</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="(game, index) in round.games" :key="game.id">
                   <td>{{ index + 1 }}</td>
                   <td>{{ game.white_player }}</td>
-                  <td>{{ game.result || 'type gameID' }}</td> <!-- Muestra el resultado o un marcador de posición -->
-                  <td>{{ game.black_player }}</td>
-                  <td v-if="authStore.isAuthenticated"> <!-- Columna combinada -->
-                    <div class="choose-result">
+                  <td>
+                    <!-- Si el resultado ya está definido, mostrarlo como texto -->
+                    <div v-if="game.result">
+                      {{ game.result }}
+                    </div>
+
+                    <!-- Si no hay resultado, mostrar el desplegable y el botón de submit -->
+                    <div v-else>
                       <select
-                        v-model="game.result"
+                        v-model="resultInputs[game.id]"
                         class="result-select"
                       >
                         <option value="" disabled>choose result</option>
                         <option value="1-0">White wins (1-0)</option>
                         <option value="0-1">Black wins (0-1)</option>
                         <option value="½-½">Draw (½-½)</option>
-                        <option value="">Unknown result</option>
                       </select>
-                      <button @click="submitGameResult(game)" class="result-btn">✅</button>
+                      <button
+                        v-if="tournament.board_type === 'LIC'"
+                        @click="submitLichessResult(game)"
+                        class="result-btn"
+                      >
+                        ✅
+                      </button>
+                      <button
+                        v-else
+                        @click="submitOTBResult(game)"
+                        class="result-btn"
+                      >
+                        ✅
+                      </button>
                     </div>
+                  </td>
+                  <td>{{ game.black_player }}</td>
+
+                  <!-- Columna "Set Result" para administradores -->
+                  <td v-if="authStore.isAuthenticated">
+                    <select
+                      v-model="game.result"
+                      class="result-select"
+                    >
+                      <option value="" disabled>choose result</option>
+                      <option value="w">White wins (w)</option>
+                      <option value="b">Black wins (b)</option>
+                      <option value="=">Draw (=)</option>
+                    </select>
+                    <button @click="submitOTBResultAdmin(game)" class="result-btn">✅</button>
                   </td>
                 </tr>
               </tbody>
@@ -173,6 +204,7 @@ const playerEmail = ref('')
 const API_URL = import.meta.env.VITE_DJANGO_URL
 const tournamentId = route.params.tournament_id
 const selectedColumns = ref([]);
+const resultInputs = ref({});
 
 const fetchRankings = async () => {
   try {
@@ -194,6 +226,36 @@ const fetchRankings = async () => {
   }
 };
 
+const submitOTBResultAdmin = async (game) => {
+  try {
+    const result = game.result;
+    if (!result) {
+      alert('Please select a result.');
+      return;
+    }
+    const token = authStore.token; // O como guardes tu token
+    const response = await axios.post(
+      `${API_URL}admin_update_game/`,
+      {
+        game_id: game.id,
+        otb_result: result,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    if (response.status === 200) {
+      alert('Result updated by admin!');
+      refreshData();
+    } else {
+      alert('Failed to update result: ' + (response.data?.message || 'Unknown error'));
+    }
+  } catch (error) {
+    alert('Error updating result: ' + (error.response?.data?.message || error.message));
+  }
+};
 const fetchRoundResults = async () => {
   try {
     const response = await fetch(API_URL + `get_round_results/${tournamentId}/`, {
@@ -366,23 +428,62 @@ const fetchRoundResults = async () => {
   }
 };
 
-const submitGameResult = async (game) => {
+const submitOTBResult = async (game) => {
   try {
-    const response = await axios.post(`${API_URL}submit_game_result/`, {
+    const result = resultInputs.value[game.id];
+    console.log('Result:', result); // Depuración: verifica el resultado seleccionado
+    if (!result) {
+      alert('Please select a result.');
+      return;
+    }
+
+    const response = await axios.post(`${API_URL}update_otb_game/`, {
       game_id: game.id,
-      result: game.result,
+      otb_result: result,
+      email: playerEmail.value, // Verifica el correo del jugador
     });
 
     if (response.status === 200) {
-      alert('Result submitted successfully!');
+      alert('OTB result submitted successfully!');
+      game.result = result; // Actualiza el resultado en el frontend
+      game.resultInput = ''; // Limpia el cuadro de texto
+      refreshData(); // Refresca los datos
     } else {
-      alert('Failed to submit result.');
+      alert('Failed to submit OTB result.');
     }
   } catch (error) {
-    console.error('Error submitting game result:', error);
+    console.error('Error submitting OTB result:', error);
     alert('An error occurred while submitting the result.');
   }
 };
+
+const submitLichessResult = async (game) => {
+  try {
+    const lichessGameId = resultInputs.value[game.id];
+    if (!lichessGameId) {
+      alert('Please enter a Lichess game ID.');
+      return;
+    }
+
+    const response = await axios.post(`${API_URL}update_lichess_game/`, {
+      game_id: game.id,
+      lichess_game_id: lichessGameId,
+    });
+
+    if (response.status === 200) {
+      alert('Lichess result updated successfully!');
+      game.result = response.data.result; // Actualiza el resultado en el frontend
+      game.resultInput = ''; // Limpia el cuadro de texto
+      refreshData(); // Refresca los datos
+    } else {
+      alert('Failed to update Lichess result.');
+    }
+  } catch (error) {
+    console.error('Error updating Lichess result:', error);
+    alert('An error occurred while updating the result.');
+  }
+};
+
 
 const toggleAccordion = (accordionName) => {
   activeAccordion.value = activeAccordion.value === accordionName ? null : accordionName;
@@ -427,8 +528,14 @@ const fetchGamesByRounds = async () => {
 
     // Actualiza las rondas en el estado del torneo
     tournament.value.rounds = rounds.map((round, index) => ({
-      number: index + 1, // Asigna un número de ronda basado en el índice
-      ...round
+      number: index + 1,
+      ...round,
+      games: round.games.map(game => {
+        if (resultInputs.value[game.id] === undefined) {
+          resultInputs.value[game.id] = '';
+        }
+        return { ...game };
+      }),
     }));
   } catch (error) {
     console.error('Error fetching games by rounds:', error);

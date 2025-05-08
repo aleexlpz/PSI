@@ -10,7 +10,7 @@ import requests
 from rest_framework.views import APIView
 from chess_models.models import getRanking
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import MethodNotAllowed
 
@@ -110,29 +110,8 @@ class SearchTournamentsAPIView(APIView):
         serializer = TournamentSerializer(tournaments, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-
 class TournamentCreateAPIView(APIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        serializer = TournamentSerializer(data=request.data)
-        if serializer.is_valid():
-            tournament = serializer.save(administrativeUser=request.user)
-            return Response(
-                {
-                    "result": True,
-                    "message": "Tournament created successfully",
-                    "tournament_id": tournament.id,  # Añade el ID explícitamente
-                },
-                status=status.HTTP_201_CREATED
-            )
-        else:
-            return Response(
-                {"result": False, "message": "Invalid data", "errors": serializer.errors},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-    
+    permission_classes = []
     
 class GetRanking(APIView):
     permission_classes = []
@@ -151,7 +130,7 @@ class GetRanking(APIView):
         for player, data in ranking.items():
             player_data = {
                 'id': player.id,
-                'name': player.name,
+                'name': player.lichess_username if player.lichess_username else player.name,
                 'score': data.get('PS', 0),
                 'rank': data.get('rank', 0),
             }
@@ -196,43 +175,8 @@ class GetPlayers(APIView):
             
         return Response(response_data, status=status.HTTP_200_OK)
     
-from rest_framework.exceptions import NotFound
-
 class GetRoundResults(APIView):
     permission_classes = []
-
-    def get(self, request, tournament_id):
-        try:
-            tournament = Tournament.objects.get(id=tournament_id)
-        except Tournament.DoesNotExist:
-            raise NotFound(detail="Tournament does not exist", code=404)
-
-        # Ordena por un campo válido
-        rounds = tournament.round_set.all().order_by('start_date')  # Cambia 'start_date' por el campo correcto
-        response_data = []
-
-        for round in rounds:
-            round_data = {
-                'id': round.id,
-                'name': round.name,
-                'games': []
-            }
-
-            games = round.game_set.all()
-            for game in games:
-                game_data = {
-                    'id': game.id,
-                    'white_player': game.white.name if game.white else None,
-                    'black_player': game.black.name if game.black else None,
-                    'result': game.result,
-                    'finished': game.finished
-                }
-                round_data['games'].append(game_data)
-
-            response_data.append(round_data)
-
-        return Response(response_data, status=status.HTTP_200_OK)
-
 
 class UpdateLichessGameAPIView(APIView):
     permission_classes = []
@@ -327,7 +271,7 @@ class UpdateOTBGameAPIView(APIView):
         )
     
 class AdminUpdateGameAPIView(APIView):
-    permission_classes = []
+    permission_classes = [permissions.IsAuthenticated]
     
     def post(self, request):
         game_id = request.data.get('game_id')
