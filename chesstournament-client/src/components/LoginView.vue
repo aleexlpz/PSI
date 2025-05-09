@@ -9,7 +9,7 @@
           v-model="username" 
           type="text"
           required
-          data-cy="username-input"
+          data-cy="username"
         >
       </div>
       <div class="form-group">
@@ -19,10 +19,10 @@
           v-model="password" 
           type="password" 
           required
-          data-cy="password-input"
+          data-cy="password"
         >
       </div>
-      <button type="submit" data-cy="login-button">LOG IN</button>
+      <button type="submit" data-cy="login">LOG IN</button>
     </form>
     <div v-if="errorMessage" class="error-message">
       {{ errorMessage }}
