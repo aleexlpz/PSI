@@ -122,7 +122,7 @@
 import { ref } from 'vue'
 
 const API_URL = import.meta.env.VITE_DJANGO_URL;
-const errorMessage = ref('') // Hacer que errorMessage sea reactivo
+const errorMessage = ref('')
 export default {
   data() {
     return {
@@ -152,8 +152,7 @@ export default {
       orderedRankingMethods: [],
       errors: {
         name: false
-      },
-      errorMessage: errorMessage
+      }
     };
   },
   methods: {
@@ -195,13 +194,12 @@ export default {
       const rows = this.tournament.playersCSV.trim().split('\n');
 
       if (rows.length < 2) {
-        errorMessage.value = 'Error: can not add players to tournament';
         return 'Error: can not add players to tournament';
       }
 
       const headers = rows[0].split(',').map(header => header.trim());
 
-      // Validar headers basado en el tipo de torneo
+      // Validate headers based on tournament type
       if (this.tournament.boardType === 'LIC') {
         if (!headers.includes('lichess_username')) {
           errorMessage.value = 'Error: can not add players to tournament';
@@ -214,13 +212,12 @@ export default {
         }
       }
 
-      // Validar cada fila
+      // Validate each row
       for (let i = 1; i < rows.length; i++) {
         const values = rows[i].split(',').map(value => value.trim());
 
         if (this.tournament.boardType === 'LIC') {
-          const username = values[headers.indexOf('lichess_username')];
-          if (!username || !/^[a-zA-Z0-9_-]+$/.test(username)) {
+          if (!values[headers.indexOf('lichess_username')]) {
             errorMessage.value = 'Error: can not add players to tournament';
             return 'Error: can not add players to tournament';
           }
@@ -230,7 +227,7 @@ export default {
             return 'Error: can not add players to tournament';
           }
 
-          // Validación básica de email
+          // Basic email validation
           const email = values[headers.indexOf('email')];
           if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             errorMessage.value = 'Error: can not add players to tournament';
@@ -239,8 +236,7 @@ export default {
         }
       }
 
-      errorMessage.value = ''; // Limpiar mensaje de error si la validación es exitosa
-      return null; // CSV válido
+      return null; // Valid CSV
     },
     async submitForm() {
       // Validar el CSV
@@ -249,7 +245,6 @@ export default {
         this.errors.playersCSV = csvError;
         return;
       }
-      
       const token = localStorage.getItem('token');
       if (!token) {
         console.error('No token found');
@@ -278,7 +273,6 @@ export default {
 
           if (response.ok) {
             const data = await response.json();
-            errorMessage.value = ''; // Limpiar mensaje de error si el torneo se crea correctamente
 
             // Crear las rondas usando el ID del torneo recién creado
             const roundResponse = await fetch(API_URL + 'create_round/', {
@@ -294,21 +288,26 @@ export default {
               // Redirigir al detalle del torneo
               this.$router.push(`/tournamentdetail/${data.tournament_id}`);
             } else {
-              errorMessage.value = 'Error creating rounds: ' + await roundResponse.text();
               console.error('Error creating rounds:', await roundResponse.text());
             }
           } else {
-            const errorData = await response.json();
-            errorMessage.value = 'Error creating tournament: ' + (errorData.message || response.statusText);
             console.error('Error creating tournament:', response.statusText);
           }
         } catch (error) {
-          errorMessage.value = 'Error creating tournament or rounds: ' + error.message;
           console.error('Error creating tournament or rounds:', error);
         }
+
       } else {
         this.errors.tournament = true;
       }
+    }
+
+  },
+  watch: {
+    selectedRankingMethods(newVal) {
+      // Actualizamos los métodos ordenados cuando cambia la selección
+      this.orderedRankingMethods = [...newVal];
+      this.tournament.rankingMethods = [...newVal];
     }
   }
 };
