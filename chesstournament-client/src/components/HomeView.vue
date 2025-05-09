@@ -3,16 +3,22 @@
     <main class="main-content">
       <div v-if="authStore.isAuthenticated" class="admin-section">
         <p>Hello, you are logged in as an administrator. Remember, with great power comes great responsibility.</p>
-        <p>As an administrator, you can create tournaments and edit or update the results of games, rounds, and tournaments.</p>
-        <p>To create a new tournament, press the <span class="bold-text">"Create Tournament"</span> button. To edit or update games, rounds, or tournaments, select the desired tournament.</p>
+        <p>As an administrator, you can create tournaments and edit or update the results of games, rounds, and
+          tournaments.</p>
+        <p>To create a new tournament, press the <span class="bold-text">"Create Tournament"</span> button. To edit or
+          update games, rounds, or tournaments, select the desired tournament.</p>
         <!-- Botón para redirigir a /createTournament -->
-        <router-link to="/createTournament" class="create-tournament-button">
+        <router-link to="/createTournament" class="create-tournament-button" data-cy="create-Tournament-button">
           Create Tournament
         </router-link>
       </div>
       <div v-else class="welcome-section">
-        <p>Welcome to the Chess Tournament Database. This database features the unique ability for players to update the results of their games. To create tournaments, an administrative account is required. However, any player can enter the result of a game.</p>
-        <p>You can use the search button to find tournaments by name. For further information, please refer to the <router-link to="/faq" class="text-link"><u>FAQ</u></router-link> section.</p>
+        <p>Welcome to the Chess Tournament Database. This database features the unique ability for players to update the
+          results of their games. To create tournaments, an administrative account is required. However, any player can
+          enter the result of a game.</p>
+        <p>You can use the search button to find tournaments by name. For further information, please refer to the
+          <router-link to="/faq" class="text-link"><u>FAQ</u></router-link> section.
+        </p>
       </div>
       <section class="tournaments-and-search">
         <div class="tournaments-section">
@@ -25,9 +31,10 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="tournament in paginatedTorneos" :key="tournament.id">
-                <td>
-                  <router-link :to="`tournamentdetail/${tournament.id}`" class="tournament-link">
+              <tr v-for="(tournament, index) in paginatedTorneos" :key="tournament.id">
+                <td :data-cy="tournament.name">
+                  <router-link :to="`tournamentdetail/${tournament.id}`" class="tournament-link"
+                    :data-cy="`tournament_name_${totalPages - currentPage + 1}_${index + 1}`">
                     {{ tournament.name }}
                   </router-link>
                 </td>
@@ -37,19 +44,13 @@
           </table>
 
           <div class="pagination">
-            <button 
-              @click="goToPage(currentPage - 1)" 
-              :disabled="currentPage === 1"
-              class="pagination-button"
-            >
+            <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1" class="pagination-button"
+              data-cy="previous-button">
               Previous
             </button>
             <span class="page-indicator">Page {{ currentPage }} of {{ totalPages }}</span>
-            <button 
-              @click="goToPage(currentPage + 1)" 
-              :disabled="currentPage === totalPages"
-              class="pagination-button"
-            >
+            <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages" class="pagination-button"
+              data-cy="next-button">
               Next
             </button>
           </div>
@@ -58,13 +59,8 @@
         <div class="search-section">
           <h3>Search</h3>
           <div class="search-box">
-            <input 
-              v-model="searchQuery" 
-              type="text" 
-              placeholder="Search..."
-              class="search-input"
-            >
-            <button class="search-button">Search</button>
+            <input v-model="searchQuery" type="text" placeholder="Search..." class="search-input" data-cy="input-search">
+            <button class="search-button" data-cy="submit-search">Search</button>
           </div>
           <div class="search-results" v-if="searchQuery && searchResults.length > 0">
             <table class="tournaments-table">
@@ -77,7 +73,8 @@
               <tbody>
                 <tr v-for="tournament in searchResults" :key="tournament.id">
                   <td>
-                    <router-link :to="`/tournament/${tournament.id}`" class="tournament-link">
+                    <router-link :to="`/tournamentdetail/${tournament.id}`" class="tournament-link"
+                      :data-cy="`search-tournament_name_${tournament.name.split('_')[2]}_${tournament.name.split('_')[3]}`">
                       {{ tournament.name }}
                     </router-link>
                   </td>
@@ -102,8 +99,10 @@ import { useAuthStore } from '@/stores/auth'
 
 const torneos = inject('torneos') || ref([])
 const searchQuery = ref('')
-const currentPage = ref(1)
 const itemsPerPage = 5
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredTorneos.value.length / itemsPerPage)))
+const currentPage = ref(1)
 
 // Torneos filtrados para la lista paginada
 const filteredTorneos = computed(() => {
@@ -118,7 +117,6 @@ const searchResults = computed(() => {
 })
 
 // Paginación
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredTorneos.value.length / itemsPerPage)))
 
 const paginatedTorneos = computed(() => {
   const startIndex = (currentPage.value - 1) * itemsPerPage
@@ -140,19 +138,25 @@ const authStore = useAuthStore()
 </script>
 
 <style scoped>
-
 .chess-app {
-  display: flex; /* Activa el modelo de caja flexible */
-  justify-content: center; /* Centra horizontalmente el contenido */
-  align-items: flex-start; /* Alinea el contenido al inicio verticalmente */
-  min-height: 100vh; /* Asegura que ocupe al menos toda la altura de la pantalla */
-  padding: 20px; /* Espaciado interno opcional */
-  box-sizing: border-box; /* Incluye el padding en el tamaño total */
+  display: flex;
+  /* Activa el modelo de caja flexible */
+  justify-content: center;
+  /* Centra horizontalmente el contenido */
+  align-items: flex-start;
+  /* Alinea el contenido al inicio verticalmente */
+  min-height: 100vh;
+  /* Asegura que ocupe al menos toda la altura de la pantalla */
+  padding: 20px;
+  /* Espaciado interno opcional */
+  box-sizing: border-box;
+  /* Incluye el padding en el tamaño total */
 }
 
 .main-content {
-  max-width: 1300px; /* Define el ancho máximo del contenido */
-  width: 100%; 
+  max-width: 1300px;
+  /* Define el ancho máximo del contenido */
+  width: 100%;
   margin: 0;
 }
 
@@ -192,25 +196,29 @@ const authStore = useAuthStore()
   background-color: #f8f9fa;
   border-radius: 8px;
   font-size: 1.7rem;
-  display: flex; /* Activa el modelo flexbox */
-  flex-direction: column; /* Asegura que los elementos estén en columna */
-  align-items: center; /* Centra horizontalmente los elementos */
+  display: flex;
+  /* Activa el modelo flexbox */
+  flex-direction: column;
+  /* Asegura que los elementos estén en columna */
+  align-items: center;
+  /* Centra horizontalmente los elementos */
 }
 
 .welcome-section {
-  text-align:justify;
+  text-align: justify;
   margin-bottom: 40px;
   padding: 20px;
   background-color: #f8f9fa;
   border-radius: 8px;
-  font-size: 1.7rem; 
+  font-size: 1.7rem;
 }
 
 .tournaments-and-search {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 30px; /* Espaciado entre las dos secciones */
+  gap: 30px;
+  /* Espaciado entre las dos secciones */
 }
 
 .tournaments-section {
@@ -278,10 +286,11 @@ const authStore = useAuthStore()
 }
 
 .search-section {
-  flex: 2; 
+  flex: 2;
   display: flex;
   flex-direction: column;
-  align-items: flex-start; /* Alinea el contenido al inicio horizontalmente */
+  align-items: flex-start;
+  /* Alinea el contenido al inicio horizontalmente */
 }
 
 .search-results {
@@ -306,6 +315,4 @@ const authStore = useAuthStore()
   text-decoration: underline;
   color: #2c0083;
 }
-
-
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div class="logout-container">
+  <div class="logout-container" data-cy="logoutPage">
     <h2>Log Out</h2>
     <p>You will be redirected to home in {{ countdown }} seconds</p>
   </div>

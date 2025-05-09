@@ -5,7 +5,7 @@ module.exports = defineConfig({
     setupNodeEvents(on, config) {
       // implement node event listeners here
     },
-    defaultCommandTimeout: 10000, // 10 seconds
+    defaultCommandTimeout: 20000, // 10 seconds
     // append baseUrl to all URL used in the tests
     baseUrl: "http://localhost:5173",
     //specPattern: "cypress/e2e/**/*.{js,jsx,ts,tsx}",
@@ -13,10 +13,10 @@ module.exports = defineConfig({
   // centralice some variables as username and password
   // use then in the test with "Cypress.env('username')"
   env: {
-    username: "y",
-    password: "y",
-    python: "/home/alex/Documentos/UAM/3/PSI/PSI-venv/bin/python",
+    username: "alumnodb",
+    password: "alumnodb",
+    python: "/home/alex/Documentos/PSI-venv/bin/python",
 //    manage: "/home/roberto/Docencia/psi/2024-25/chesstournament/chesstournament_server/manage.py",
-    manage: "/home//Documentos/UAM/3/PSI/PSIP3/chesstournament/manage.py",
+    manage: "/home/alex/Documentos/UAM/3/PSI/PSIP3/chesstournament/manage.py",
   },
 });

@@ -22,9 +22,9 @@
           data-cy="password"
         >
       </div>
-      <button type="submit" data-cy="login">LOG IN</button>
+      <button type="submit" data-cy="login-button">LOG IN</button>
     </form>
-    <div v-if="errorMessage" class="error-message">
+    <div v-if="errorMessage" class="error-message" data-cy="error-message">
       {{ errorMessage }}
     </div>
   </div>
@@ -58,21 +58,22 @@ const handleLogin = async () => {
         'Content-Type': 'application/json'
       }
     })
-    console.log('Login response:', response.data.auth_token) // Verifica la respuesta del servidor
+    console.log('Login response:', response.data.auth_token)
     
     if (response.data && response.data.auth_token) {
-      console.log('Auth token:', response.data.auth_token) // Verifica el token de autenticación
-      authStore.login(response.data.auth_token)
-      router.push('/')
+      console.log('Auth token:', response.data.auth_token);
+      authStore.login(response.data.auth_token);
+      authStore.setWelcomeMessage('Hello, you are logged in as an administrator'); 
+      router.push('/');
     } else {
-      errorMessage.value = 'Invalid response from server, try it better'
+      errorMessage.value = 'Invalid response from server, try it better';
     }
   } catch (error) {
     if (error.response) {
       if (error.response.status === 401) {
-        errorMessage.value = 'Invalid username or password' + error.response.status
+        errorMessage.value = 'Error: Invalid username or password'
       } else {
-        errorMessage.value = 'Server error' + username.value + password.value + '    ' + error.response.status
+        errorMessage.value = 'Error: Invalid username or password'
       }
     } else if (error.request) {
       errorMessage.value = 'No response from server'

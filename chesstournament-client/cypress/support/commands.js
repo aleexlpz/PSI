@@ -331,7 +331,7 @@ Cypress.Commands.add("logout", () => {
       "@gmail.com';" +
       "user.save()\n" +
       "EOF\n";
-    // cy.log("COMMAND: " + command)
+    cy.log("COMMAND: " + command)
     cy.exec(command);
   });
   

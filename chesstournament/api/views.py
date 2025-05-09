@@ -12,7 +12,7 @@ from chess_models.models import getRanking
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import MethodNotAllowed
+from rest_framework.exceptions import MethodNotAllowed, NotFound
 
 
 
@@ -116,6 +116,8 @@ class TournamentCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        
+        print(request.data)
         serializer = TournamentSerializer(data=request.data)
         if serializer.is_valid():
             tournament = serializer.save(administrativeUser=request.user)
@@ -195,7 +197,7 @@ class GetPlayers(APIView):
             
         return Response(response_data, status=status.HTTP_200_OK)
     
-from rest_framework.exceptions import NotFound
+
 
 class GetRoundResults(APIView):
     permission_classes = []

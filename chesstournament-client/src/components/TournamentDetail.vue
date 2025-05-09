@@ -1,6 +1,8 @@
 <template>
   <div class="tournament-detail">
-    <h1>Tournament: <em>{{ tournament.name }}</em></h1>
+    <div v-if="loading">Loading tournament data...</div>
+    <div v-else ></div>
+    <h1 data-cy="tournament-title">Tournament: <em>{{ tournament.name }}</em></h1>
 
 
     <button @click="refreshData" class="refresh-btn" data-cy="refresh-button">
@@ -76,7 +78,7 @@
             </p>
 
             <!-- Rondas -->
-            <div v-for="round in tournament.rounds" :key="round.id" class="round-section">
+            <div v-for="round in tournament.rounds" :key="round.id" class="round-section" :data-cy="`round_${round.number}`">
               <h3>{{ round.name }}</h3>
               <table class="pairings-table">
                 <thead>
@@ -100,17 +102,18 @@
 
                       <!-- Si no hay resultado, mostrar el desplegable y el botón de submit -->
                       <div v-else>
-                        <select v-model="resultInputs[game.id]" class="result-select">
+                        <select v-model="resultInputs[game.id]" class="result-select"
+                          :data-cy="`select-${round.number}-${index + 1}`">
                           <option value="" disabled>choose result</option>
-                          <option value="1-0">White wins (1-0)</option>
-                          <option value="0-1">Black wins (0-1)</option>
-                          <option value="½-½">Draw (½-½)</option>
+                          <option value="w">White wins (1-0)</option>
+                          <option value="b">Black wins (0-1)</option>
+                          <option value="=">Draw (½-½)</option>
                         </select>
                         <button v-if="tournament.board_type === 'LIC'" @click="submitLichessResult(game)"
-                          class="result-btn">
+                          class="result-btn" :data-cy="`input-${round.number}-${index + 1}`">
                           ✅
                         </button>
-                        <button v-else @click="submitOTBResult(game)" class="result-btn">
+                        <button v-else @click="submitOTBResult(game)" class="result-btn" >
                           ✅
                         </button>
                       </div>
@@ -119,7 +122,8 @@
 
                     <!-- Columna "Set Result" para administradores -->
                     <td v-if="authStore.isAuthenticated">
-                      <select v-model="game.result" class="result-select">
+                      <select v-model="game.result" class="result-select"
+                        :data-cy="`select-admin-${round.number}-${index + 1}`">
                         <option value="" disabled>choose result</option>
                         <option value="w">White wins (w)</option>
                         <option value="b">Black wins (b)</option>
@@ -146,9 +150,9 @@
           <label>Result:</label>
           <select v-model="resultInput" class="form-select" data-cy="result-select">
             <option value="">Select result</option>
-            <option value="1-0">1-0 (White wins)</option>
-            <option value="0-1">0-1 (Black wins)</option>
-            <option value="½-½">½-½ (Draw)</option>
+            <option value="w">1-0 (White wins)</option>
+            <option value="b">0-1 (Black wins)</option>
+            <option value="=">½-½ (Draw)</option>
           </select>
         </div>
 
@@ -180,6 +184,7 @@ import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const authStore = useAuthStore()
+const loading = ref(true);
 
 const tournament = ref([])
 const rankings = ref([])
@@ -347,7 +352,6 @@ const fetchRoundResults = async () => {
       buchholz[player] = opponentScores.reduce((sum, score) => sum + score, 0);
 
       // Calcular Buchholz Cut 1 (BC)
-      // Calcular Buchholz Cut 1 (BC)
       if (opponentScores.length > 1) {
         // Excluir solo el puntaje más bajo
         buchholzCut1[player] = opponentScores
@@ -417,6 +421,7 @@ const fetchRoundResults = async () => {
 
 const submitOTBResult = async (game) => {
   try {
+    console.log('game.id:', game.id, 'game:', game); // <-- Aquí ves el id y el objeto completo
     const result = resultInputs.value[game.id];
     console.log('Result:', result); // Depuración: verifica el resultado seleccionado
     if (!result) {
@@ -477,6 +482,7 @@ const toggleAccordion = (accordionName) => {
 };
 
 const fetchTournamentData = async () => {
+  
   try {
     const response = await fetch(API_URL + `tournaments/${tournamentId}/`, {
       headers: {
@@ -496,36 +502,35 @@ const fetchTournamentData = async () => {
   } catch (error) {
     console.error('Error fetching tournament data:', error);
   }
-};
-
-const fetchGamesByRounds = async () => {
   try {
-    const response = await fetch(`${API_URL}get_round_results/${tournamentId}/`, {
+    loading.value = true;
+    const response = await fetch(API_URL + `tournaments/${tournamentId}/`, {
       headers: {
         'Accept': 'application/json',
       }
     });
+    // ... rest of the code
+  } finally {
+    loading.value = false;
+  }
+};
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
+const fetchGamesByRounds = async () => {
+  try {
+    const response = await fetch(`${API_URL}get_round_results/${tournamentId}/`);
     const rounds = await response.json();
-    console.log('Fetched games by rounds:', rounds); // Depuración: verifica los datos obtenidos
-
-    // Actualiza las rondas en el estado del torneo
-    tournament.value.rounds = rounds.map((round, index) => ({
-      number: index + 1,
+    
+    tournament.value.rounds = rounds.map((round, roundIndex) => ({
+      number: roundIndex + 1, // Round numbers start at 1
       ...round,
-      games: round.games.map(game => {
-        if (resultInputs.value[game.id] === undefined) {
-          resultInputs.value[game.id] = '';
-        }
-        return { ...game };
-      }),
+      games: round.games.map((game, gameIndex) => ({
+        ...game,
+        gameNumber: gameIndex + 1, // Game numbers start at 1
+        resultInput: resultInputs.value[game.id] || ''
+      }))
     }));
   } catch (error) {
-    console.error('Error fetching games by rounds:', error);
+    console.error('Error fetching rounds:', error);
   }
 };
 
@@ -536,11 +541,17 @@ const refreshData = () => {
   fetchGamesByRounds();
 };
 
-onMounted(() => {
-  fetchTournamentData();
-  fetchRankings();
-  fetchRoundResults();
-  fetchGamesByRounds();
+onMounted(async () => {
+  await fetchTournamentData();
+  await fetchRankings();
+  await fetchRoundResults();
+  await fetchGamesByRounds();
+  
+  // Debug: Log the rendered rounds and games
+  console.log('Rounds data:', tournament.value.rounds);
+  tournament.value.rounds?.forEach(round => {
+    console.log(`Round ${round.number} games:`, round.games);
+  });
 });
 </script>
 

@@ -4,16 +4,19 @@
       <div class="navbar-content">
         <router-link to="/" class="navbar-title">Chess-T-DB</router-link>
         <div class="navbar-links">
-          <router-link to="/" class="nav-link">Home</router-link>
-          <router-link to="/login" class="nav-link">Admin Log-In</router-link>
-          <router-link to="/logout" class="nav-link">Log-Out</router-link>
-          <router-link to="/faq" class="nav-link">FAQ</router-link>
+          <router-link to="/" class="nav-link" data-cy="admin-log">Home</router-link>
+          <router-link to="/login" class="nav-link" data-cy="login-cypress-test">Admin Log-In</router-link>
+          <router-link to="/logout" class="nav-link" data-cy="logout-cypress-test">Log-Out</router-link>
+          <router-link to="/faq" class="nav-link" data-cy="admin-log">FAQ</router-link>
         </div>
       </div>
     </nav>
     <main class="main-content">
+      <!-- Mostrar el mensaje de bienvenida si está disponible -->
+      <div v-if="authStore.welcomeMessage" data-cy="admin-log">
+        {{ authStore.welcomeMessage }}
+      </div>
       <router-view></router-view>
-      
     </main>
     <footer class="footer">
       © 2025 Copyright: Alejandro López & Ernesto Piñón
@@ -22,8 +25,8 @@
 </template>
 
 <script setup>
-import { provide, ref, onMounted } from 'vue'
-
+import { provide, ref, onMounted, } from 'vue'
+import { useAuthStore } from '@/stores/auth'
 
 const torneos = ref([])
 const isLoading = ref(false)
@@ -32,29 +35,37 @@ const API_URL = import.meta.env.VITE_DJANGO_URL
 
 provide('torneos', torneos)
 
-const listadoTorneos = async () => {
-  isLoading.value = true
-  error.value = null
-  
-  try {
-    const response = await fetch(API_URL + 'tournaments/', {
-      headers: {
-        'Accept': 'application/json',
-      }
-    })    
+const authStore = useAuthStore()
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+const listadoTorneos = async () => {
+  isLoading.value = true;
+  error.value = null;
+  torneos.value = []; // Resetear lista
+
+  try {
+    let allTorneos = [];
+    let nextPage = API_URL + 'tournaments/'; // URL inicial
+
+    while (nextPage) {
+      const response = await fetch(nextPage, {
+        headers: { 'Accept': 'application/json' }
+      });
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+      const data = await response.json();
+      allTorneos = [...allTorneos, ...data.results];
+      nextPage = data.next; // URL de la siguiente página (null si no hay más)
     }
-    torneos.value = (await response.json()).results
+
+    torneos.value = allTorneos;
     
-  } catch (error) {
-    error.value = `Error al cargar torneos: ${error.message}`
-    torneos.value = []
+  } catch (err) {
+    error.value = `Error al cargar torneos: ${err.message}`;
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
-}
+};
 
 onMounted(() => {
   listadoTorneos()
