@@ -114,10 +114,10 @@ WSGI_APPLICATION = os.environ.get("WSGI_APPLICATION")
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-LOCAL_DATABASE_URL = os.environ.get("LOCAL_DATABASE_URL")
+NEON_DATABASE_URL = os.environ.get("NEON_DATABASE_URL")
 
 DATABASES = {
-    'default': dj_database_url.config(default=LOCAL_DATABASE_URL)
+    'default': dj_database_url.config(default=NEON_DATABASE_URL)
 }
 
 
