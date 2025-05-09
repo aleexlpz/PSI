@@ -39,39 +39,3 @@ trf==1.1.1
 typing_extensions==4.9.0
 urllib3==2.2.2
 whitenoise==5.2.0
-
-
-lichess_username
-jrcuesta
-zaragozana
-Clavada
-rmarabini
-
-curl -X POST http://localhost:8000/api/v1/tournament_create/ \
--H "Content-Type: application/json" \
--H "Authorization: Bearer 6d9fd4ccd6a6bb22e930b8bdf5f6263d27ead32a" \
--d '{
-  "name": "My Tournament",
-  "start_date": "2025-04-08",
-  "end_date": "2025-04-08",
-  "max_update_time": 43200,
-  "only_administrative": true,
-  "tournament_type": "SR",
-  "tournament_speed": "RP",
-  "board_type": "OTB",
-  "win_points": 1.0,
-  "draw_points": 0.5,
-  "lose_points": 0.0,
-  "timeControl": "15+0",
-  "number_of_rounds_for_swiss": 0,
-  "referee": 1,
-  "players": [1, 2, 3],
-  "rankingList": ["BU", "SB"]
-}'
-
-
-curl -X POST http://localhost:8000/api/v1/token/login -H "Content-Type: application/json" -d '{"password": "alumnodb", "username": "alumnodb"}'
-
-curl -X POST http://localhost:8000/api/v1/token/login --data 'password=alumnodb&username=alumnodb'
-
-curl -X GET http://localhost:8000/api/v1/tournaments/1 -H "Content-Type: application/json", "Authorization: Token ${token}"

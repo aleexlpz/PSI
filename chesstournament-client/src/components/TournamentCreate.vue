@@ -163,6 +163,9 @@ export default {
               this.tournament.category === 'bullet' ? 'BU' : null, // Mapear a los valores esperados
         board_type: this.tournament.boardType === 'lichess' ? 'LIC' :
           this.tournament.boardType === 'otb' ? 'OTB' : null, // Mapear a los valores esperados
+        win_points: this.tournament.points.win,
+        draw_points: this.tournament.points.draw,
+        lose_points: this.tournament.points.lose,
         rankingList: this.selectedRankingMethods, // Lista vacía si no se selecciona nada
         players: this.tournament.playersCSV
           ? this.tournament.playersCSV.split('\n').map((_, index) => index + 1)

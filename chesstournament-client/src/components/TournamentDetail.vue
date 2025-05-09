@@ -1,8 +1,8 @@
 <template>
   <div class="tournament-detail">
     <h1>Tournament: <em>{{ tournament.name }}</em></h1>
-    
-    
+
+
     <button @click="refreshData" class="refresh-btn" data-cy="refresh-button">
       Refresh Page
     </button>
@@ -41,10 +41,14 @@
                   <td v-if="selectedColumns.includes('WI')">{{ player.wins }}</td>
                   <td>{{ player.score.toFixed(2) }}</td>
                   <td v-if="selectedColumns.includes('BT')">{{ player.blackGames }}</td>
-                  <td v-if="selectedColumns.includes('BU')">{{ player.buchholz !== undefined ? player.buchholz.toFixed(2) : '0.00' }}</td>
-                  <td v-if="selectedColumns.includes('BC')">{{ player.buchholzCut1 !== undefined ? player.buchholzCut1.toFixed(2) : '0.00' }}</td>
-                  <td v-if="selectedColumns.includes('BA')">{{ player.buchholzAverage !== undefined ? player.buchholzAverage.toFixed(2) : '0.00' }}</td>
-                  <td v-if="selectedColumns.includes('SB')">{{ player.sonnebornBerger !== undefined ? player.sonnebornBerger.toFixed(2) : '0.00' }}</td>
+                  <td v-if="selectedColumns.includes('BU')">{{ player.buchholz !== undefined ?
+                    player.buchholz.toFixed(2) : '0.00' }}</td>
+                  <td v-if="selectedColumns.includes('BC')">{{ player.buchholzCut1 !== undefined ?
+                    player.buchholzCut1.toFixed(2) : '0.00' }}</td>
+                  <td v-if="selectedColumns.includes('BA')">{{ player.buchholzAverage !== undefined ?
+                    player.buchholzAverage.toFixed(2) : '0.00' }}</td>
+                  <td v-if="selectedColumns.includes('SB')">{{ player.sonnebornBerger !== undefined ?
+                    player.sonnebornBerger.toFixed(2) : '0.00' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -54,94 +58,82 @@
 
       <!-- Pairings/Results Accordion -->
       <div class="accordion-item" :class="{ active: activeAccordion === 'pairings' }">
-      <div class="accordion-header" @click="toggleAccordion('pairings')">
-        <h2>Pairings/Results</h2>
-        <span class="accordion-icon">{{ activeAccordion === 'pairings' ? '−' : '+' }}</span>
-      </div>
-      <transition name="slide">
-        <div class="accordion-content" v-show="activeAccordion === 'pairings'">
-          <!-- Tipo de torneo -->
-          <div class="board-type-indicator">
-            {{ tournament.board_type === 'LIC' ? 'LICHESS' : 'OTB' }}
-          </div>
-
-          <!-- Instrucciones -->
-          <p class="instructions">
-            Press <span class="result-btn">✅</span> to update the game result. See the <router-link to="/faq" class="text-link"><u>FAQ</u></router-link> for more information.
-          </p>
-
-          <!-- Rondas -->
-          <div v-for="round in tournament.rounds" :key="round.id" class="round-section">
-            <h3>{{ round.name }}</h3>
-            <table class="pairings-table">
-              <thead>
-                <tr>
-                  <th>Table</th>
-                  <th>White</th>
-                  <th>Result</th>
-                  <th>Black</th>
-                  <th v-if="authStore.isAuthenticated">Choose Result</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(game, index) in round.games" :key="game.id">
-                  <td>{{ index + 1 }}</td>
-                  <td>{{ game.white_player }}</td>
-                  <td>
-                    <!-- Si el resultado ya está definido, mostrarlo como texto -->
-                    <div v-if="game.result">
-                      {{ game.result }}
-                    </div>
-
-                    <!-- Si no hay resultado, mostrar el desplegable y el botón de submit -->
-                    <div v-else>
-                      <select
-                        v-model="resultInputs[game.id]"
-                        class="result-select"
-                      >
-                        <option value="" disabled>choose result</option>
-                        <option value="1-0">White wins (1-0)</option>
-                        <option value="0-1">Black wins (0-1)</option>
-                        <option value="½-½">Draw (½-½)</option>
-                      </select>
-                      <button
-                        v-if="tournament.board_type === 'LIC'"
-                        @click="submitLichessResult(game)"
-                        class="result-btn"
-                      >
-                        ✅
-                      </button>
-                      <button
-                        v-else
-                        @click="submitOTBResult(game)"
-                        class="result-btn"
-                      >
-                        ✅
-                      </button>
-                    </div>
-                  </td>
-                  <td>{{ game.black_player }}</td>
-
-                  <!-- Columna "Set Result" para administradores -->
-                  <td v-if="authStore.isAuthenticated">
-                    <select
-                      v-model="game.result"
-                      class="result-select"
-                    >
-                      <option value="" disabled>choose result</option>
-                      <option value="w">White wins (w)</option>
-                      <option value="b">Black wins (b)</option>
-                      <option value="=">Draw (=)</option>
-                    </select>
-                    <button @click="submitOTBResultAdmin(game)" class="result-btn">✅</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        <div class="accordion-header" @click="toggleAccordion('pairings')">
+          <h2>Pairings/Results</h2>
+          <span class="accordion-icon">{{ activeAccordion === 'pairings' ? '−' : '+' }}</span>
         </div>
-      </transition>
-    </div>
+        <transition name="slide">
+          <div class="accordion-content" v-show="activeAccordion === 'pairings'">
+            <!-- Tipo de torneo -->
+            <div class="board-type-indicator">
+              {{ tournament.board_type === 'LIC' ? 'LICHESS' : 'OTB' }}
+            </div>
+
+            <!-- Instrucciones -->
+            <p class="instructions">
+              Press <span class="result-btn">✅</span> to update the game result. See the <router-link to="/faq"
+                class="text-link"><u>FAQ</u></router-link> for more information.
+            </p>
+
+            <!-- Rondas -->
+            <div v-for="round in tournament.rounds" :key="round.id" class="round-section">
+              <h3>{{ round.name }}</h3>
+              <table class="pairings-table">
+                <thead>
+                  <tr>
+                    <th>Table</th>
+                    <th>White</th>
+                    <th>Result</th>
+                    <th>Black</th>
+                    <th v-if="authStore.isAuthenticated">Choose Result</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(game, index) in round.games" :key="game.id">
+                    <td>{{ index + 1 }}</td>
+                    <td>{{ game.white_player }}</td>
+                    <td>
+                      <!-- Si el resultado ya está definido, mostrarlo como texto -->
+                      <div v-if="game.result">
+                        {{ game.result }}
+                      </div>
+
+                      <!-- Si no hay resultado, mostrar el desplegable y el botón de submit -->
+                      <div v-else>
+                        <select v-model="resultInputs[game.id]" class="result-select">
+                          <option value="" disabled>choose result</option>
+                          <option value="1-0">White wins (1-0)</option>
+                          <option value="0-1">Black wins (0-1)</option>
+                          <option value="½-½">Draw (½-½)</option>
+                        </select>
+                        <button v-if="tournament.board_type === 'LIC'" @click="submitLichessResult(game)"
+                          class="result-btn">
+                          ✅
+                        </button>
+                        <button v-else @click="submitOTBResult(game)" class="result-btn">
+                          ✅
+                        </button>
+                      </div>
+                    </td>
+                    <td>{{ game.black_player }}</td>
+
+                    <!-- Columna "Set Result" para administradores -->
+                    <td v-if="authStore.isAuthenticated">
+                      <select v-model="game.result" class="result-select">
+                        <option value="" disabled>choose result</option>
+                        <option value="w">White wins (w)</option>
+                        <option value="b">Black wins (b)</option>
+                        <option value="=">Draw (=)</option>
+                      </select>
+                      <button @click="submitOTBResultAdmin(game)" class="result-btn">✅</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </transition>
+      </div>
     </div>
 
     <!-- Result Modal -->
@@ -149,7 +141,7 @@
       <div class="modal-content">
         <h3>Enter Game Result</h3>
         <p>Game: {{ currentGame.white_player.name }} vs {{ currentGame.black_player.name }}</p>
-        
+
         <div class="form-group">
           <label>Result:</label>
           <select v-model="resultInput" class="form-select" data-cy="result-select">
@@ -162,13 +154,8 @@
 
         <div v-if="tournament.board_type === 'OTB'" class="form-group">
           <label>Your Email (for verification):</label>
-          <input 
-            v-model="playerEmail" 
-            type="email" 
-            class="form-input"
-            placeholder="Enter your registered email"
-            data-cy="player-email-input"
-          >
+          <input v-model="playerEmail" type="email" class="form-input" placeholder="Enter your registered email"
+            data-cy="player-email-input">
         </div>
 
         <div class="modal-actions">
@@ -374,7 +361,7 @@ const fetchRoundResults = async () => {
       buchholzAverage[player] =
         opponentScores.length > 0
           ? opponentScores.reduce((sum, score) => sum + score, 0) /
-            opponentScores.length
+          opponentScores.length
           : 0;
     });
 
@@ -642,14 +629,15 @@ h1 em {
 }
 
 /* Table Styles */
-.standings-table, .pairings-table {
+.standings-table,
+.pairings-table {
   width: 100%;
   border-collapse: collapse;
   margin: 10px 0;
   font-size: 0.9rem;
 }
 
-.standings-table th, 
+.standings-table th,
 .pairings-table th {
   background-color: #f8f9fa;
   padding: 10px;
@@ -657,13 +645,13 @@ h1 em {
   border-bottom: 2px solid #ddd;
 }
 
-.standings-table td, 
+.standings-table td,
 .pairings-table td {
   padding: 10px;
   border-bottom: 1px solid #eee;
 }
 
-.standings-table tr:hover, 
+.standings-table tr:hover,
 .pairings-table tr:hover {
   background-color: #f5f5f5;
 }
@@ -707,7 +695,7 @@ h1 em {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0,0,0,0.5);
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -737,7 +725,8 @@ h1 em {
   font-weight: 500;
 }
 
-.form-select, .form-input {
+.form-select,
+.form-input {
   width: 100%;
   padding: 8px 12px;
   border: 1px solid #ddd;
@@ -853,9 +842,11 @@ h1 em {
   font-size: 0.9rem;
   margin-right: 5px;
 }
+
 .choose-result {
   display: flex;
   align-items: center;
-  gap: 10px; /* Espaciado entre el desplegable y el botón */
+  gap: 10px;
+  /* Espaciado entre el desplegable y el botón */
 }
 </style>

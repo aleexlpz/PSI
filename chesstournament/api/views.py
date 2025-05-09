@@ -16,6 +16,7 @@ from rest_framework.exceptions import MethodNotAllowed
 
 
 
+
 class CustomPagination(pagination.PageNumberPagination):
     page_size = 10
     page_size_query_param = 'page_size'
@@ -110,7 +111,6 @@ class SearchTournamentsAPIView(APIView):
         serializer = TournamentSerializer(tournaments, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-
 class TournamentCreateAPIView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -132,7 +132,6 @@ class TournamentCreateAPIView(APIView):
                 {"result": False, "message": "Invalid data", "errors": serializer.errors},
                 status=status.HTTP_400_BAD_REQUEST
             )
-    
     
 class GetRanking(APIView):
     permission_classes = []

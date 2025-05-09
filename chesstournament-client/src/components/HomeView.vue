@@ -14,10 +14,6 @@
         <p>Welcome to the Chess Tournament Database. This database features the unique ability for players to update the results of their games. To create tournaments, an administrative account is required. However, any player can enter the result of a game.</p>
         <p>You can use the search button to find tournaments by name. For further information, please refer to the <router-link to="/faq" class="text-link"><u>FAQ</u></router-link> section.</p>
       </div>
-      <div v-else class="welcome-section">
-        <p>Welcome to the Chess Tournament Database. This database features the unique ability for players to update the results of their games. To create tournaments, an administrative account is required. However, any player can enter the result of a game.</p>
-        <p>You can use the search button to find tournaments by name. For further information, please refer to the<router-link to="/faq" class="text-link"><u>FAQ</u></router-link>section.</p>
-      </div>
       <section class="tournaments-and-search">
         <div class="tournaments-section">
           <h2>Tournaments</h2>
